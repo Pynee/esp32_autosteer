@@ -11,10 +11,10 @@
 	url = https://github.com/pfeerick/elapsedMillis.git
 	branch = master
 [submodule "Adafruit_BNO08x"]
-	path = Adafruit_BNO08x
+	path = lib/Adafruit_BNO08x
 	url = https://github.com/adafruit/Adafruit_BNO08x.git
 	branch = master
 [submodule "SimpleKalmanFilter"]
-	path = SimpleKalmanFilter
+	path = lib/SimpleKalmanFilter
 	url = https://github.com/denyssene/SimpleKalmanFilter.git
 	branch = master
