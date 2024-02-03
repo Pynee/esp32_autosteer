@@ -1,0 +1,20 @@
+[submodule "WiFiManager"]
+	path = lib/WiFiManager
+	url = https://github.com/tzapu/WiFiManager.git
+	branch = master
+[submodule "TaskScheduler"]
+	path = lib/TaskScheduler
+	url = https://github.com/arkhipenko/TaskScheduler.git
+	branch = master
+[submodule "elapsedMillis"]
+	path = lib/elapsedMillis
+	url = https://github.com/pfeerick/elapsedMillis.git
+	branch = master
+[submodule "Adafruit_BNO08x"]
+	path = Adafruit_BNO08x
+	url = https://github.com/adafruit/Adafruit_BNO08x.git
+	branch = master
+[submodule "SimpleKalmanFilter"]
+	path = SimpleKalmanFilter
+	url = https://github.com/denyssene/SimpleKalmanFilter.git
+	branch = master
