@@ -1,14 +1,14 @@
 #include <Adafruit_BNO08x.h>
 
-
 #define RAD_TO_DEG_X_10 572.95779513082320876798154814105
 // Conversion to Hexidecimal
-const char* asciiHex = "0123456789ABCDEF";
+const char *asciiHex = "0123456789ABCDEF";
 
 /* A parser is declared with 3 handlers at most */
 NMEAParser<2> parser;
 
-struct IMUVector {
+struct IMUVector
+{
   uint32_t time;
   float qr;
   float qi;
@@ -16,7 +16,8 @@ struct IMUVector {
   float qk;
 } imuVector;
 
-struct euler_t {
+struct euler_t
+{
   float yaw;
   float pitch;
   float roll;
@@ -28,7 +29,7 @@ uint8_t error;
 
 Adafruit_BNO08x bno08x(-1);
 // BNO08x address variables to check where it is
-const uint8_t bno08xAddresses[] = { 0x4A, 0x4B };
+const uint8_t bno08xAddresses[] = {0x4A, 0x4B};
 const int16_t nrBNO08xAdresses = sizeof(bno08xAddresses) / sizeof(bno08xAddresses[0]);
 uint8_t bno08xAddress;
 
@@ -59,18 +60,20 @@ char imuRoll[6];
 char imuPitch[6];
 char imuYawRate[6];
 
-void initHandler() {
+void initHandler()
+{
   // the dash means wildcard
   parser.setErrorHandler(errorHandler);
   parser.addHandler("G-GGA", GGA_Handler);
   parser.addHandler("G-VTG", VTG_Handler);
 }
 // If odd characters showed up.
-void errorHandler() {
-  //nothing at the moment
+void errorHandler()
+{
+  // nothing at the moment
 }
 
-void GGA_Handler()  //Rec'd GGA
+void GGA_Handler() // Rec'd GGA
 {
   // fix time
   parser.getArg(0, fixTime);
@@ -100,21 +103,27 @@ void GGA_Handler()  //Rec'd GGA
 
   GGA_Available = true;
 
-  if (useBNO08x) {
+  if (useBNO08x)
+  {
     calculateIMU();
-  } else {
+  }
+  else
+  {
     itoa(65535, imuHeading, 10);
-  }             //Get IMU data ready
-  BuildNmea();  //Build & send data GPS data to AgIO (Both Dual & Single)
+  }            // Get IMU data ready
+  BuildNmea(); // Build & send data GPS data to AgIO (Both Dual & Single)
 }
 
-void gpsStream() {
-  while (Serial2.available()) {
+void gpsStream()
+{
+  while (Serial2.available())
+  {
     parser << Serial2.read();
   }
 }
 
-void readBNO(float qr, float qi, float qj, float qk) {
+void readBNO(float qr, float qi, float qj, float qk)
+{
   imuVector.time = millis();
   imuVector.qr = qr;
   imuVector.qi = qi;
@@ -122,12 +131,13 @@ void readBNO(float qr, float qi, float qj, float qk) {
   imuVector.qk = qk;
 }
 
-void calculateIMU() {
+void calculateIMU()
+{
   quaternionToEuler(imuVector.qr, imuVector.qi, imuVector.qj, imuVector.qk);
   int16_t temp = 0;
 
-  //BNO is reading in its own timer
-  // Fill rest of Panda Sentence - Heading
+  // BNO is reading in its own timer
+  //  Fill rest of Panda Sentence - Heading
   temp = ypr.yaw;
   itoa(temp, imuHeading, 10);
 
@@ -143,7 +153,8 @@ void calculateIMU() {
   itoa(0, imuYawRate, 10);
 }
 
-void quaternionToEuler(float qr, float qi, float qj, float qk) {
+void quaternionToEuler(float qr, float qi, float qj, float qk)
+{
 
   float sqr = sq(qr);
   float sqi = sq(qi);
@@ -151,93 +162,113 @@ void quaternionToEuler(float qr, float qi, float qj, float qk) {
   float sqk = sq(qk);
 
   ypr.yaw = atan2(2.0 * (qi * qj + qk * qr), (sqi - sqj - sqk + sqr));
-  if (steerConfig.IsUseY_Axis) {
+  if (steerConfig.IsUseY_Axis)
+  {
     ypr.pitch = asin(-2.0 * (qi * qk - qj * qr) / (sqi + sqj + sqk + sqr));
     ypr.roll = atan2(2.0 * (qj * qk + qi * qr), (-sqi - sqj + sqk + sqr));
-  } else {
+  }
+  else
+  {
     ypr.roll = asin(-2.0 * (qi * qk - qj * qr) / (sqi + sqj + sqk + sqr));
     ypr.pitch = atan2(2.0 * (qj * qk + qi * qr), (-sqi - sqj + sqk + sqr));
   }
 
   ypr.yaw *= -RAD_TO_DEG_X_10;
-  if (ypr.yaw < 0) {
+  if (ypr.yaw < 0)
+  {
     ypr.yaw += 3600;
   }
   ypr.pitch *= RAD_TO_DEG_X_10;
   ypr.roll *= RAD_TO_DEG_X_10;
 
-  if (invertRoll) {
+  if (invertRoll)
+  {
     ypr.roll *= -1;
   }
 }
 
-void setReports() {
-  if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 20000)) {
+void setReports()
+{
+  if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 20000))
+  {
     Serial.println("Could not enable stabilized remote vector");
     return;
   }
 }
 
-void imuTask() {
-  if (!useBNO08x) {
+void imuTask()
+{
+  if (!useBNO08x)
+  {
     return;
   }
-  if (bno08x.wasReset()) {
+  if (bno08x.wasReset())
+  {
     Serial.print("sensor was reset ");
     setReports();
   }
 
-  if (!bno08x.getSensorEvent(&sensorValue)) {
+  if (!bno08x.getSensorEvent(&sensorValue))
+  {
     return;
   }
 
-  switch (sensorValue.sensorId) {
+  switch (sensorValue.sensorId)
+  {
 
-    case SH2_GAME_ROTATION_VECTOR:
-      readBNO(sensorValue.un.gameRotationVector.real, sensorValue.un.gameRotationVector.i, sensorValue.un.gameRotationVector.j, sensorValue.un.gameRotationVector.k);
-      break;
+  case SH2_GAME_ROTATION_VECTOR:
+    readBNO(sensorValue.un.gameRotationVector.real, sensorValue.un.gameRotationVector.i, sensorValue.un.gameRotationVector.j, sensorValue.un.gameRotationVector.k);
+    break;
   }
 }
 
-
-void initIMU() {
-  //set up communication
+void initIMU()
+{
+  // set up communication
   Wire.begin();
-  for (int16_t i = 0; i < nrBNO08xAdresses; i++) {
+  for (int16_t i = 0; i < nrBNO08xAdresses; i++)
+  {
     bno08xAddress = bno08xAddresses[i];
 
-    //Serial.print("\r\nChecking for BNO08X on ");
-    //Serial.println(bno08xAddress, HEX);
+    // Serial.print("\r\nChecking for BNO08X on ");
+    // Serial.println(bno08xAddress, HEX);
     Wire.beginTransmission(bno08xAddress);
     error = Wire.endTransmission();
 
-    if (error == 0) {
-      //Serial.println("Error = 0");
+    if (error == 0)
+    {
+      // Serial.println("Error = 0");
       Serial.print("0x");
       Serial.print(bno08xAddress, HEX);
       Serial.println(" BNO08X Ok.");
       // Initialize BNO080 lib
-      if (bno08x.begin_I2C((int32_t)bno08xAddress))  //??? Passing NULL to non pointer argument, remove maybe ???
+      if (bno08x.begin_I2C((int32_t)bno08xAddress)) //??? Passing NULL to non pointer argument, remove maybe ???
       {
         setReports();
         useBNO08x = true;
-      } else {
+      }
+      else
+      {
         Serial.println("BNO080 not detected at given I2C address.");
       }
-    } else {
-      //Serial.println("Error = 4");
+    }
+    else
+    {
+      // Serial.println("Error = 4");
       Serial.print("0x");
       Serial.print(bno08xAddress, HEX);
       Serial.println(" BNO08X not Connected or Found");
     }
-    if (useBNO08x) {
+    if (useBNO08x)
+    {
       imuTS.enable();
       break;
     }
   }
 }
 
-void BuildNmea(void) {
+void BuildNmea(void)
+{
 
   strcpy(nmea, "");
 
@@ -271,27 +302,27 @@ void BuildNmea(void) {
   strcat(nmea, altitude);
   strcat(nmea, ",");
 
-  //10
+  // 10
   strcat(nmea, ageDGPS);
   strcat(nmea, ",");
 
-  //11
+  // 11
   strcat(nmea, speedKnots);
   strcat(nmea, ",");
 
-  //12
+  // 12
   strcat(nmea, imuHeading);
   strcat(nmea, ",");
 
-  //13
+  // 13
   strcat(nmea, imuRoll);
   strcat(nmea, ",");
 
-  //14
+  // 14
   strcat(nmea, imuPitch);
   strcat(nmea, ",");
 
-  //15
+  // 15
   strcat(nmea, imuYawRate);
 
   strcat(nmea, "*");
@@ -301,32 +332,35 @@ void BuildNmea(void) {
   strcat(nmea, "\r\n");
 
   int len = strlen(nmea);
-  sendData((uint8_t*)nmea, len);
+  sendData((uint8_t *)nmea, len);
 }
 
-void CalculateChecksum(void) {
+void CalculateChecksum(void)
+{
   int16_t sum = 0;
   int16_t inx = 0;
   char tmp;
 
   // The checksum calc starts after '$' and ends before '*'
-  for (inx = 1; inx < 200; inx++) {
+  for (inx = 1; inx < 200; inx++)
+  {
     tmp = nmea[inx];
 
     // * Indicates end of data and start of checksum
-    if (tmp == '*') {
+    if (tmp == '*')
+    {
       break;
     }
 
-    sum ^= tmp;  // Build checksum
+    sum ^= tmp; // Build checksum
   }
 
   byte chk = (sum >> 4);
-  char hex[2] = { asciiHex[chk], 0 };
+  char hex[2] = {asciiHex[chk], 0};
   strcat(nmea, hex);
 
   chk = (sum % 16);
-  char hex2[2] = { asciiHex[chk], 0 };
+  char hex2[2] = {asciiHex[chk], 0};
   strcat(nmea, hex2);
 }
 
@@ -408,7 +442,8 @@ void CalculateChecksum(void) {
      48          Checksum
 */
 
-void VTG_Handler() {
+void VTG_Handler()
+{
   // vtg heading
   parser.getArg(0, vtgHeading);
 
