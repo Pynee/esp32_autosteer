@@ -1,96 +1,27 @@
 #include <SimpleKalmanFilter.h>
 #include <Arduino.h>
 #include "configuration.h"
-float rawSensor, rawWAS;
-
-SimpleKalmanFilter sensorFilter(2, 2, 0.01);
-
-SimpleKalmanFilter wasFilter(5, 5, 0.01);
-// steering variables
-float steerAngleActual = 0;
-float steerAngleSetPoint = 0; // the desired angle from AgOpen
-int16_t steeringPosition = 0; // from steering sensor
-float steerAngleError = 0;    // setpoint - actual
-int16_t helloSteerPosition = 0;
-
-int value = 0;
-// int WAS_SENSOR_PIN = 0;
-// int LOAD_SENSOR_PIN = 0;
+#include "Button.h"
 
 void initInput()
 {
-  // keep pulled high and drag low to activate, noise free safe
-  pinMode(WORKSW_PIN, INPUT_PULLUP);
-  pinMode(STEERSW_PIN, INPUT_PULLUP);
-  pinMode(REMOTE_PIN, INPUT_PULLUP);
+  hardwareSwitches.steerSwitch.init();
+  hardwareSwitches.workSwitch.init();
 }
 
 void inputHandler()
 {
+  hardwareSwitches.workSwitch.read();  // read hardware workSwitch
+  hardwareSwitches.steerSwitch.read(); // read hardware steerSwitch
+  // Put workSwitch in first, steerSwitch in second and remoteSwitch to third bit in switchByte
+  hardwareSwitches.switchByte = (hardwareSwitches.remoteSwitch.getState() & 4) & (hardwareSwitches.steerSwitch.getState() & 2) & (hardwareSwitches.workSwitch.getState() & 1);
 
-  // WAS sensore
-  value = analogRead(WAS_SENSOR_PIN);
-  rawWAS = wasFilter.updateEstimate(value);
-
-  // Load sensor?
+  sensors.wheelAngleSensor.read(); // update WAS sensore
   if (steerConfig.PressureSensor || steerConfig.CurrentSensor)
   {
-    value = analogRead(LOAD_SENSOR_PIN);
-    rawSensor = sensorFilter.updateEstimate(value);
-  }
-
-  // Pressure sensor?
-  if (steerConfig.PressureSensor)
-  {
-    sensorSample = rawSensor;
-    sensorSample *= 0.25;
-    sensorReading = sensorReading * 0.6 + sensorSample * 0.4;
-    if (sensorReading >= steerConfig.PulseCountMax)
+    sensors.loadSensor.read(); // update loadSensor/currentSensor
+    if (steerConfig.PressureSensor)
     {
-      steerSwitch = 1; // reset values like it turned off
-      currentState = 1;
-      previous = 0;
     }
   }
-
-  // Current sensor?
-  if (steerConfig.CurrentSensor)
-  {
-    sensorSample = rawSensor;
-    sensorSample = (abs(775 - sensorSample)) * 0.5;
-    sensorReading = sensorReading * 0.7 + sensorSample * 0.3;
-    sensorReading = _min(sensorReading, 255);
-
-    if (sensorReading >= steerConfig.PulseCountMax)
-    {
-      steerSwitch = 1; // reset values like it turned off
-      currentState = 1;
-      previous = 0;
-    }
-  }
-}
-
-void calcSteerAngle()
-{
-  steeringPosition = rawWAS;
-  steeringPosition = (steeringPosition << 2); // bit shift by 2  0 to 13610 is 0 to 5v
-  helloSteerPosition = steeringPosition - 6800;
-  // DETERMINE ACTUAL STEERING POSITION
-
-  // convert position to steer angle. 32 counts per degree of steer pot position in my case
-  //   ***** make sure that negative steer angle makes a left turn and positive value is a right turn *****
-  if (steerConfig.InvertWAS)
-  {
-    steeringPosition = (steeringPosition - 6805 - steerSettings.wasOffset); // 1/2 of full scale
-    steerAngleActual = (float)(steeringPosition) / -steerSettings.steerSensorCounts;
-  }
-  else
-  {
-    steeringPosition = (steeringPosition - 6805 + steerSettings.wasOffset); // 1/2 of full scale
-    steerAngleActual = (float)(steeringPosition) / steerSettings.steerSensorCounts;
-  }
-
-  // Ackerman fix
-  if (steerAngleActual < 0)
-    steerAngleActual = (steerAngleActual * steerSettings.AckermanFix);
 }

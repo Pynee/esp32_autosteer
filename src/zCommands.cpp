@@ -1,4 +1,5 @@
-
+#include <Arduino.h>
+#include "configuration.h"
 String cmd = "";
 
 void commandHandler()

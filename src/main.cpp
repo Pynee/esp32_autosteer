@@ -13,12 +13,9 @@
 #include "zHandlers.cpp"
 #include "zInput.cpp"
 #include "zNMEAParser.h"
-#include "zPackets.cpp"
+// #include "zPackets.cpp"
 
 Scheduler ts;
-
-// Create WiFiManager object
-WiFiManager wfm;
 
 void imuTask();
 
@@ -45,25 +42,6 @@ Task t5(1000, TASK_FOREVER, &commandHandler, &ts, true);
 // EEPROM
 int16_t EEread = 0;
 
-// On Off
-uint8_t guidanceStatus = 0;
-uint8_t prevGuidanceStatus = 0;
-bool guidanceStatusChanged = false;
-
-// speed sent as *10
-float gpsSpeed = 0;
-bool GGA_Available = false; // Do we have GGA on correct port?
-
-const bool invertRoll = true; // Used for IMU with dual antenna
-
-// Variables for settings
-
-void steerSettingsInit()
-{
-  // for PWM High to Low interpolator
-  highLowPerDeg = ((float)(steerSettings.highPWM - steerSettings.lowPWM)) / LOW_HIGH_DEGREES;
-}
-
 void autosteerSetup()
 {
   // PWM rate settings. Set them both the same!!!!
@@ -72,23 +50,24 @@ void autosteerSetup()
        122hz = 1
        3921hz = 2
   */
-  if (PWM_Frequency == 0)
+  switch (PWM_Frequency)
   {
+  case 0:
     ledcSetup(PWM1_LPWM, 490, 8);
     ledcSetup(PWM2_RPWM, 490, 8);
-  }
-  else if (PWM_Frequency == 1)
-  {
+    break;
+  case 1:
     ledcSetup(PWM1_LPWM, 122, 8);
     ledcSetup(PWM2_RPWM, 122, 8);
-  }
-  else if (PWM_Frequency == 2)
-  {
+    break;
+  case 2:
     ledcSetup(PWM1_LPWM, 3921, 8);
     ledcSetup(PWM2_RPWM, 3921, 8);
+    break;
+  default:
   }
 
-  pinMode(DIR1_RL_ENABLE, OUTPUT);
+  pinMode(DIR1_RL_ENABLE_PIN, OUTPUT);
 
   // Disable digital inputs for analog input pins
   // pinMode(CURRENT_SENSOR_PIN, INPUT_DISABLE);
@@ -117,10 +96,11 @@ void setup()
   // Setup Serial Monitor
   Serial.begin(115200);
   Serial2.begin(115200);
+
   initUDP();
   initHandler();
 
-  initIMU();
+  initIMU(imuTS);
 
   initInput();
 

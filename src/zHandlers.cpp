@@ -1,4 +1,7 @@
 #include <Adafruit_BNO08x.h>
+#include <TaskScheduler.h>
+#include "zNMEAParser.h"
+#include "configuration.h"
 
 #define RAD_TO_DEG_X_10 572.95779513082320876798154814105
 // Conversion to Hexidecimal
@@ -23,10 +26,6 @@ struct euler_t
   float roll;
 } ypr;
 
-// booleans to see if we are using BNO08x
-bool useBNO08x = false;
-uint8_t error;
-
 Adafruit_BNO08x bno08x(-1);
 // BNO08x address variables to check where it is
 const uint8_t bno08xAddresses[] = {0x4A, 0x4B};
@@ -34,6 +33,14 @@ const int16_t nrBNO08xAdresses = sizeof(bno08xAddresses) / sizeof(bno08xAddresse
 uint8_t bno08xAddress;
 
 sh2_SensorValue_t sensorValue;
+
+void errorHandler();
+void CalculateChecksum(void);
+void GGA_Handler();
+void VTG_Handler();
+void BuildNmea(void);
+void calculateIMU();
+void quaternionToEuler(float qr, float qi, float qj, float qk);
 
 // the new PANDA sentence buffer
 char nmea[100];
@@ -222,7 +229,7 @@ void imuTask()
   }
 }
 
-void initIMU()
+void initIMU(Task &imuTS)
 {
   // set up communication
   Wire.begin();
@@ -332,7 +339,7 @@ void BuildNmea(void)
   strcat(nmea, "\r\n");
 
   int len = strlen(nmea);
-  sendData((uint8_t *)nmea, len);
+  (*sendDatafn)((uint8_t *)nmea, len);
 }
 
 void CalculateChecksum(void)
