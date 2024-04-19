@@ -1,5 +1,20 @@
-Fork of this repo that is converted into Platformio project:
-https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32
+This Orginaly a fork of this repo that was converted into Platformio project
+https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 but now is pretty much totally rewritten. I'm trying to make a more cleanly written codebase for AgOpenGPS firmware targeting ESP32 boards. 
+
+Tasks:
+autosteerWorker     //Handles everything steeringmotor/hydraulic related things
+gnssStreamWorker    //Handles communication to/from gps board
+imuWorker           //handles communication from IMU board
+inputWorker         //Reads switch states(steer and work switch etc.) and analog sensors(WAS for now)
+uartEventWorker     //Handles UART(Serial) communication
+sendDataTask        //Handles UDP send queue 
+WifiManager         //Handles wifi connection 
+
+
+
+
+
+Input
 
 
 using these submodules in lib folder:
