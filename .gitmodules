@@ -22,11 +22,11 @@
 	path = lib/Adafruit_BusIO
 	url = https://github.com/adafruit/Adafruit_BusIO.git
 	branch = master
-[submodule "PIDPWM"]
-	path = lib/PIDPWM
-	url = https://github.com/AdysTech/PIDPWM.git
-	branch = master
 [submodule "Adafruit_Sensor"]
 	path = lib/Adafruit_Sensor
 	url = https://github.com/adafruit/Adafruit_Sensor.git
+	branch = master
+[submodule "AutoPID"]
+	path = AutoPID
+	url = https://github.com/r-downing/AutoPID.git
 	branch = master
