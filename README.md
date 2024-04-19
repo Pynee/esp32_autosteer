@@ -1,7 +1,7 @@
 This Orginaly a fork of this repo that was converted into Platformio project
 https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 but now is pretty much totally rewritten. I'm trying to make a more cleanly written codebase for AgOpenGPS firmware targeting ESP32 boards. 
 
-|Tasks:| call |priority|purpose |
+|Tasks:| trigger/interval |priority|purpose |
 |---|---|---|---|
 |autosteerWorker|AUTOSTEER_INTERVAL (default 100ms)|3|Handles everything steeringmotor/hydraulic related things|
 |gnssStreamWorker|trigger on new data from gnss board|3|Handles communication to/from gps board|
