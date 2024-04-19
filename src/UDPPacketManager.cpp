@@ -64,8 +64,15 @@ bool UDPPacketManager::initUDP()
                      { ntripPacketProxy(packet); });
     }
   }
+  xTaskCreate(this->startWorkerImpl, "UdpSendDataTask", 3096, NULL, 3, NULL);
   return true;
 }
+
+void UDPPacketManager::startWorkerImpl(void *_this)
+{
+    ((IMUHandler *)_this)->sendDataTask(_this);
+}
+
 
 void UDPPacketManager::ntripPacketProxy(AsyncUDPPacket packet)
 {
@@ -194,7 +201,7 @@ void UDPPacketManager::parsePacket(uint8_t *packet, int size, AsyncUDPPacket udp
   }
 }
 
-void UDPPacketManager::sendData(void *z)
+void UDPPacketManager::sendDataTask(void *z)
 {
   if (sendQueue == NULL)
   {

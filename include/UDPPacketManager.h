@@ -55,13 +55,14 @@ private:
     void parseSteerData(uint8_t *packet);
     void parseSteerSettings(uint8_t *packet);
     void parseSteerConfig(uint8_t *packet);
+    static void startWorkerImpl(void *);
+    void sendDataTask(void *z);
     void (*gnssSendData)(uint8_t *data, size_t len);
 
 public:
     UDPPacketManager(void gnssSendData(uint8_t *data, size_t len));
     UDPPacketManager(UART debugUART, void gnssSendData(uint8_t *data, size_t len));
     bool initUDP();
-    void sendData(void *z);
     QueueHandle_t sendQueue = xQueueCreate(10, sizeof(struct QueueItem *));
 };
 
