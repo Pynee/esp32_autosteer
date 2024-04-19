@@ -2,10 +2,6 @@
 	path = lib/WiFiManager
 	url = https://github.com/tzapu/WiFiManager.git
 	branch = master
-[submodule "TaskScheduler"]
-	path = lib/TaskScheduler
-	url = https://github.com/arkhipenko/TaskScheduler.git
-	branch = master
 [submodule "elapsedMillis"]
 	path = lib/elapsedMillis
 	url = https://github.com/pfeerick/elapsedMillis.git
@@ -27,6 +23,6 @@
 	url = https://github.com/adafruit/Adafruit_Sensor.git
 	branch = master
 [submodule "AutoPID"]
-	path = AutoPID
+	path = lib/AutoPID
 	url = https://github.com/r-downing/AutoPID.git
 	branch = master

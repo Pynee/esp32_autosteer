@@ -1,3 +1,6 @@
+#ifndef UDPPACKETMANAGER_H
+#define UDPPACKETMANAGER_H
+
 #include <Arduino.h>
 #include <ESP.h>
 #include <esp_wifi.h>
@@ -6,13 +9,16 @@
 #include "AsyncUDP.h"
 #include <EEPROM.h>
 #include "configuration.h"
+#include "UARTHandler.h"
 
 class UDPPacketManager
 {
 private:
+    UART debugUART;
+    // UART gnssUART;
     IPAddress myip;
     uint8_t aog2Count = 0;
-
+    WiFiManager wfm;
     elapsedMillis gpsSpeedUpdateTimer = 0;
     // Relays
     bool isRelayActiveHigh = true;
@@ -49,9 +55,14 @@ private:
     void parseSteerData(uint8_t *packet);
     void parseSteerSettings(uint8_t *packet);
     void parseSteerConfig(uint8_t *packet);
+    void (*gnssSendData)(uint8_t *data, size_t len);
 
 public:
-    UDPPacketManager();
+    UDPPacketManager(void gnssSendData(uint8_t *data, size_t len));
+    UDPPacketManager(UART debugUART, void gnssSendData(uint8_t *data, size_t len));
     bool initUDP();
-    void sendData(uint8_t *data, uint8_t datalen);
+    void sendData(void *z);
+    QueueHandle_t sendQueue = xQueueCreate(10, sizeof(struct QueueItem *));
 };
+
+#endif

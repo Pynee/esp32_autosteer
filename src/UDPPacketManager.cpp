@@ -1,13 +1,19 @@
 #include "UDPPacketManager.h"
 
-UDPPacketManager::UDPPacketManager()
+UDPPacketManager::UDPPacketManager(void gnssSendData(uint8_t *data, size_t len))
 {
+  this->gnssSendData = gnssSendData;
+}
+UDPPacketManager::UDPPacketManager(UART debugUART, void gnssSendData(uint8_t *data, size_t len))
+{
+  this->gnssSendData = gnssSendData;
+  this->debugUART = debugUART;
 }
 
 void UDPPacketManager::steerSettingsInit()
 {
   // for PWM High to Low interpolator
-  highLowPerDeg = ((float)(steerSettings.highPWM - steerSettings.lowPWM)) / LOW_HIGH_DEGREES;
+  receivedData.highLowPerDeg = ((float)(steerSettings.highPWM - steerSettings.lowPWM)) / LOW_HIGH_DEGREES;
 }
 
 bool UDPPacketManager::initUDP()
@@ -19,7 +25,8 @@ bool UDPPacketManager::initUDP()
   if (!wfm.autoConnect("ESP32AGOpenGPS"))
   {
     // Did not connect, print error message
-    Serial.println("failed to connect and hit timeout");
+    // Serial.println("failed to connect and hit timeout");
+    debugUART.println("failed to connect and hit timeout");
 
     // Reset and try again
     ESP.restart();
@@ -31,21 +38,28 @@ bool UDPPacketManager::initUDP()
 
   myip = WiFi.localIP();
   // Connected!
-  Serial.println("WiFi connected");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  debugUART.println("WiFi connected");
+  debugUART.print("IP address: ");
+  debugUART.println(WiFi.localIP());
+  // Serial.println("WiFi connected");
+  // Serial.print("IP address: ");
+  // Serial.println(WiFi.localIP());
 
   if (udp.listen(AOGAutoSteerPort))
   {
-    Serial.print("UDP Listening on IP: ");
-    Serial.println(WiFi.localIP());
+    debugUART.print("UDP Listening on IP: ");
+    debugUART.println(WiFi.localIP());
+    // Serial.print("UDP Listening on IP: ");
+    // Serial.println(WiFi.localIP());
     udp.onPacket([=](AsyncUDPPacket packet)
                  { autoSteerPacketParser(packet); });
 
     if (ntrip.listen(AOGNtripPort))
     {
-      Serial.print("UDP Listening on IP: ");
-      Serial.println(WiFi.localIP());
+      debugUART.print("UDP Listening on IP: ");
+      debugUART.println(WiFi.localIP());
+      // Serial.print("UDP Listening on IP: ");
+      // Serial.println(WiFi.localIP());
       ntrip.onPacket([=](AsyncUDPPacket packet)
                      { ntripPacketProxy(packet); });
     }
@@ -57,7 +71,8 @@ void UDPPacketManager::ntripPacketProxy(AsyncUDPPacket packet)
 {
   if (packet.length() > 0)
   {
-    Serial2.write(packet.data(), packet.length());
+    // Serial2.write(packet.data(), packet.length());
+    gnssSendData(packet.data(), packet.length());
   }
 }
 
@@ -102,8 +117,10 @@ void UDPPacketManager::autoSteerPacketParser(AsyncUDPPacket udpPacket)
 
       if (data[lenght - 1] != (byte)CK_A)
       {
-        Serial.print("Packet: CRC error: ");
-        Serial.print(CK_A);
+        debugUART.print("Packet: CRC error: ");
+        debugUART.println(CK_A);
+        // Serial.print("Packet: CRC error: ");
+        // Serial.print(CK_A);
         printLnByteArray(data, lenght);
         break;
       }
@@ -138,20 +155,18 @@ void UDPPacketManager::parsePacket(uint8_t *packet, int size, AsyncUDPPacket udp
     case 200: // Hello Sent To Module
     {
 
-      int16_t sa = (int16_t)(dataToSend.currentsteerAngle * 100);
+      int16_t sa = (int16_t)(dataToSend.currentSteerAngle * 100);
 
       helloFromAutoSteer[5] = (uint8_t)sa;
       helloFromAutoSteer[6] = sa >> 8;
 
-      helloFromAutoSteer[7] = (uint8_t)helloSteerPosition;
-      helloFromAutoSteer[8] = helloSteerPosition >> 8;
-      helloFromAutoSteer[9] = switchByte;
-
-      sendData(helloFromAutoSteer, sizeof(helloFromAutoSteer));
-      if (useBNO08x)
-      {
-        sendData(helloFromIMU, sizeof(helloFromIMU));
-      }
+      helloFromAutoSteer[7] = (uint8_t)dataToSend.helloSteerPosition;
+      helloFromAutoSteer[8] = dataToSend.helloSteerPosition >> 8;
+      helloFromAutoSteer[9] = hardwareSwitches.switchByte;
+      QueueItem item = {helloFromAutoSteer, sizeof(helloFromAutoSteer)};
+      xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
+      // QueueItem item = {helloFromIMU, sizeof(helloFromIMU)};
+      // xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
     }
     case 202: // Scan Request
     {
@@ -165,56 +180,78 @@ void UDPPacketManager::parsePacket(uint8_t *packet, int size, AsyncUDPPacket udp
                                myip[0], myip[1], myip[2], myip[3],
                                myip[0], myip[1], myip[2], 23};
 
-        sendData(scanReply, sizeof(scanReply));
+        QueueItem item = {scanReply, sizeof(scanReply)};
+        xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
       }
     }
     }
   }
   else
   {
-    Serial.print("Unknown packet!!!");
+    debugUART.print("Unknown packet!!!");
+    //Serial.print("Unknown packet!!!");
     printLnByteArray(packet, size);
   }
 }
 
-void UDPPacketManager::sendData(uint8_t *data, uint8_t datalen)
+void UDPPacketManager::sendData(void *z)
 {
-
-  AsyncUDPMessage m = AsyncUDPMessage(datalen);
-  int16_t CK_A = 0;
-  for (uint8_t i = 2; i < datalen - 1; i++)
+  if (sendQueue == NULL)
   {
-    CK_A = (CK_A + data[i]);
+    debugUART.print("queue creation failed!!");
+    //Serial.print("queue creation failed!!");
+    // queue creation failed!!
   }
-  data[datalen - 1] = CK_A;
+  for (;;)
+  {
+    while (uxQueueMessagesWaiting(sendQueue))
+    {
+      QueueItem *queueItem = nullptr;
 
-  m.write(data, datalen);
-  udp.sendTo(m, ipDes, DestinationPort);
+      if (xQueueReceive(sendQueue, &queueItem, 0) == pdTRUE)
+      {
+        AsyncUDPMessage m = AsyncUDPMessage(queueItem->length);
+        int16_t CK_A = 0;
+        for (uint8_t i = 2; i < queueItem->length - 1; i++)
+        {
+          CK_A = (CK_A + queueItem->data[i]);
+        }
+        queueItem->data[queueItem->length - 1] = CK_A;
+
+        m.write(queueItem->data, queueItem->length);
+        udp.sendTo(m, ipDes, DestinationPort);
+        delete queueItem;
+      }
+    }
+  }
 }
 
-void printLnByteArray(uint8_t *data, uint8_t datalen)
+void UDPPacketManager::printLnByteArray(uint8_t *data, uint8_t datalen)
 {
   for (int i = 0; i < datalen; i++)
   {
-    Serial.print(data[i]);
-    Serial.print(" ");
+    debugUART.print(data[i]);
+    debugUART.print(" ");
+    //Serial.print(data[i]);
+    //Serial.print(" ");
   }
-  Serial.println();
+  //Serial.println();
+  debugUART.println();
 }
 
 void UDPPacketManager::parseSteerData(uint8_t *packet)
 {
-  ReceivedData.gpsSpeed = ((float)(packet[5] | packet[6] << 8)) * 0.1;
+  receivedData.gpsSpeed = ((float)(packet[5] | packet[6] << 8)) * 0.1;
   gpsSpeedUpdateTimer = 0;
 
   // prev = guidanceStatus;
-  ReceivedData.guidanceStatusByte = packet[7];
-  state.guidanceStatus = bitRead(guidanceStatus, 0);
+  receivedData.guidanceStatusByte = packet[7];
+  state.guidanceStatus = bitRead(receivedData.guidanceStatusByte, 0);
   // guidanceStatus = packet[7];
   // guidanceStatusChanged = (guidanceStatus != prevGuidanceStatus);
 
   // Bit 8,9    set point steer angle * 100 is sent
-  ReceivedData.steerAngleTarget = ((float)(packet[8] | ((int8_t)packet[9]) << 8)) * 0.01; // combine high and low bytes
+  receivedData.steerTargetAngle = ((float)(packet[8] | ((int8_t)packet[9]) << 8)) * 0.01; // combine high and low bytes
 
   // Bit 10 Tram
   tram = packet[10];
@@ -228,7 +265,7 @@ void UDPPacketManager::parseSteerData(uint8_t *packet)
   //----------------------------------------------------------------------------
   // Serial Send to agopenGPS
 
-  int16_t sa = (int16_t)(dataToSend.currentsteerAngle * 100);
+  int16_t sa = (int16_t)(dataToSend.currentSteerAngle * 100);
 
   PGN_253[5] = (uint8_t)sa;
   PGN_253[6] = sa >> 8;
@@ -241,10 +278,11 @@ void UDPPacketManager::parseSteerData(uint8_t *packet)
   PGN_253[9] = (uint8_t)8888;
   PGN_253[10] = 8888 >> 8;
 
-  PGN_253[11] = switchByte;
-  PGN_253[12] = (uint8_t)pwmDisplay;
+  PGN_253[11] = hardwareSwitches.switchByte;
+  PGN_253[12] = (uint8_t)dataToSend.pwmDisplay;
 
-  sendData(PGN_253, sizeof(PGN_253));
+  QueueItem item = {PGN_253, sizeof(PGN_253)};
+  xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
 
   // Steer Data 2 -------------------------------------------------
   if (steerConfig.PressureSensor || steerConfig.CurrentSensor)
@@ -254,7 +292,8 @@ void UDPPacketManager::parseSteerData(uint8_t *packet)
       // Send fromAutosteer2
       PGN_250[5] = (steerConfig.PressureSensor) ? (byte)(sensors.loadSensor.getValue() * 0.25) : (byte)(abs(775 - sensors.loadSensor.getValue()) * 0.5);
 
-      sendData(PGN_250, sizeof(PGN_250));
+      QueueItem item = {PGN_250, sizeof(PGN_250)};
+      xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
       aog2Count = 0;
     }
   }

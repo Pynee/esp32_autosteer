@@ -8,6 +8,7 @@ Sensor::Sensor(int analogPin, float mea_e, float est_e, float q) : sensorFilter(
 int Sensor::read()
 {
     currentValue = sensorFilter.updateEstimate(analogRead(pin));
+    return currentValue;
 };
 int Sensor::getValue()
 {

@@ -1,3 +1,6 @@
+#ifndef BUTTON_H
+#define BUTTON_H
+
 #include <stdint.h>
 #include <Arduino.h>
 class Button
@@ -18,3 +21,4 @@ public:
     bool stateChanged();
     bool isItRising();
 };
+#endif
