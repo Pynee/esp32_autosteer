@@ -8,10 +8,10 @@ UART::UART(uint8_t port)
 {
     this->uart_port = port;
 }
-UART::UART(uint8_t port, void callback(uint8_t *data, size_t len))
+UART::UART(uint8_t _port, void _callback(uint8_t *data, size_t len))
 {
-    this->uart_port = port;
-    this->callback = callback;
+    this->uart_port = _port;
+    this->callback = _callback;
 }
 void UART::setCallback(void callback(uint8_t *data, size_t len))
 {

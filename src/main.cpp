@@ -52,7 +52,7 @@ void setup()
 
   // Setup Serial Monitor
   // Serial.begin(115200);
-  Serial2.begin(115200);
+  // Serial2.begin(115200);
   packetManager.initUDP();
   imuHandler.initIMU();
   initGnssHandler(&pandaBuilder);

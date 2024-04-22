@@ -7,9 +7,9 @@ NMEAMessage nmeaMessage;
 UART gnssUart(GNSS_PORT, gnssReceiveData);
 bool GGA_Available = false;
 
-void initGnssHandler(PandaBuilder *pandaBuilderptr)
+void initGnssHandler(PandaBuilder *pandaBuilder)
 {
-  pandaBuilderptr = pandaBuilderptr;
+  pandaBuilderptr = pandaBuilder;
   // the dash means wildcard
   parser.setErrorHandler(errorHandler);
   parser.addHandler("G-GGA", GGA_Handler);
