@@ -4,7 +4,8 @@
 #include <WiFiManager.h>
 #include "Button.h"
 #include "Sensor.h"
-// #include "PidPwm.hpp"
+#include "IMUHandler.h"
+
 #define DEBUG_PORT 1             // Port for debuging
 #define GNSS_PORT 2              // Port for GNSS board
 #define AOGNtripPort 2233        // port NTRIP data from AOG comes in
@@ -36,9 +37,9 @@
 #define PWM2_RPWM 14
 
 //--------------------------- Switch Input Pins ------------------------
-#define STEERSW_PIN 25 // Steerswitch
-#define WORKSW_PIN 26  // Workswitch
-#define REMOTE_PIN 33  // No idea how this is meant to work. Propably doesn't
+#define STEERSW_PIN 5 // Steerswitch
+#define WORKSW_PIN 6  // Workswitch
+#define REMOTE_PIN 7  // No idea how this is meant to work. Propably doesn't
 
 // How many degrees before decreasing Max PWM
 #define LOW_HIGH_DEGREES 3.0
@@ -50,8 +51,8 @@ const uint16_t LOOP_TIME = 20; // 50Hz
 const uint16_t WATCHDOG_THRESHOLD = 100;
 
 // Define sensor pin for current or pressure sensor
-#define LOAD_SENSOR_PIN 39
-#define WAS_SENSOR_PIN 36
+#define LOAD_SENSOR_PIN 17
+#define WAS_SENSOR_PIN 18
 
 struct SteerSettings
 {
@@ -65,7 +66,7 @@ struct SteerSettings
     float steerSensorCounts = 30; // How many steps in sensor is one degree in angle
     float AckermanFix = 1;        // sent as percent
 };
-static SteerSettings steerSettings; // 11 bytes
+extern SteerSettings steerSettings; // 11 bytes
 
 // Variables for settings - 0 is false
 struct Setup
@@ -84,14 +85,14 @@ struct Setup
     uint8_t IsDanfoss = 0;
     uint8_t IsUseY_Axis = 0; // Set to 0 to use X Axis, 1 to use Y avis
 };
-static Setup steerConfig; // 9 bytes
+extern Setup steerConfig; // 9 bytes
 
 struct Sensors
 {
     Sensor wheelAngleSensor = Sensor(WAS_SENSOR_PIN, 5, 5, 00.1);
     Sensor loadSensor = Sensor(LOAD_SENSOR_PIN, 2, 2, 0.01);
 };
-static Sensors sensors;
+extern Sensors sensors;
 
 // GLOBAL VARIABLES
 
@@ -100,8 +101,12 @@ struct AOGDataToSend // Data struct for variables that are sent to AOG
     uint16_t helloSteerPosition;
     double currentSteerAngle;
     uint8_t pwmDisplay;
+    char imuHeading[6];
+    char imuRoll[6];
+    char imuPitch[6];
+    char imuYawRate[6];
 };
-static AOGDataToSend dataToSend;
+extern AOGDataToSend dataToSend;
 struct AOGReceivedData // Data struct for variables that are received to AOG
 {
     uint8_t guidanceStatusByte; // Byte including all AOG status bits
@@ -109,7 +114,7 @@ struct AOGReceivedData // Data struct for variables that are received to AOG
     float highLowPerDeg; // How many degrees before decreasing Max PWM
     float gpsSpeed;      // GPS Speed in kph
 };
-static AOGReceivedData receivedData;
+extern AOGReceivedData receivedData;
 
 struct HardwareSwitches
 {
@@ -118,14 +123,14 @@ struct HardwareSwitches
     Button steerSwitch = Button(STEERSW_PIN);
     uint8_t switchByte = 0;
 };
-static HardwareSwitches hardwareSwitches;
+extern HardwareSwitches hardwareSwitches;
 
 struct State
 {
     bool autoSteerEnabled = false;
     bool guidanceStatus = false;
 };
-static State state;
+extern State state;
 
 struct NMEAMessage
 {

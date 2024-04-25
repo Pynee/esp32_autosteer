@@ -34,7 +34,7 @@ void UART::uartEventWorker(void *pvParameters)
         if (xQueueReceive(uart_queue, (void *)&event, (TickType_t)portMAX_DELAY))
         {
             bzero(dtmp, RD_BUF_SIZE);
-            ESP_LOGI(TAG, "uart[%d] event:", uart_port);
+            // ESP_LOGI(TAG, "uart[%d] event:", uart_port);
             switch (event.type)
             {
             // Event of UART receving data
@@ -43,20 +43,20 @@ void UART::uartEventWorker(void *pvParameters)
             be full.*/
             case UART_DATA:
             {
-                ESP_LOGI(TAG, "[UART DATA]: %d", event.size);
+                // ESP_LOGI(TAG, "[UART DATA]: %d", event.size);
                 uart_read_bytes(uart_port, dtmp, event.size, portMAX_DELAY);
-                callback(dtmp, event.size);
-                ESP_LOGI(TAG, "[DATA EVT]:");
+                // callback(dtmp, event.size);
+                // ESP_LOGI(TAG, "[DATA EVT]:");
                 uart_write_bytes(uart_port, (const char *)dtmp, event.size);
                 break;
             }
             // Event of HW FIFO overflow detected
             case UART_FIFO_OVF:
             {
-                ESP_LOGI(TAG, "hw fifo overflow");
-                // If fifo overflow happened, you should consider adding flow control for your application.
-                // The ISR has already reset the rx FIFO,
-                // As an example, we directly flush the rx buffer here in order to read more data.
+                // ESP_LOGI(TAG, "hw fifo overflow");
+                //  If fifo overflow happened, you should consider adding flow control for your application.
+                //  The ISR has already reset the rx FIFO,
+                //  As an example, we directly flush the rx buffer here in order to read more data.
                 uart_flush_input(uart_port);
                 xQueueReset(uart_queue);
                 break;
@@ -64,9 +64,9 @@ void UART::uartEventWorker(void *pvParameters)
             // Event of UART ring buffer full
             case UART_BUFFER_FULL:
             {
-                ESP_LOGI(TAG, "ring buffer full");
-                // If buffer full happened, you should consider increasing your buffer size
-                // As an example, we directly flush the rx buffer here in order to read more data.
+                // ESP_LOGI(TAG, "ring buffer full");
+                //  If buffer full happened, you should consider increasing your buffer size
+                //  As an example, we directly flush the rx buffer here in order to read more data.
                 uart_flush_input(uart_port);
                 xQueueReset(uart_queue);
                 break;
@@ -74,19 +74,19 @@ void UART::uartEventWorker(void *pvParameters)
             // Event of UART RX break detected
             case UART_BREAK:
             {
-                ESP_LOGI(TAG, "uart rx break");
+                // ESP_LOGI(TAG, "uart rx break");
                 break;
             }
             // Event of UART parity check error
             case UART_PARITY_ERR:
             {
-                ESP_LOGI(TAG, "uart parity error");
+                // ESP_LOGI(TAG, "uart parity error");
                 break;
             }
             // Event of UART frame error
             case UART_FRAME_ERR:
             {
-                ESP_LOGI(TAG, "uart frame error");
+                // ESP_LOGI(TAG, "uart frame error");
                 break;
             }
             // UART_PATTERN_DET
@@ -94,7 +94,7 @@ void UART::uartEventWorker(void *pvParameters)
             {
                 uart_get_buffered_data_len(uart_port, &buffered_size);
                 int pos = uart_pattern_pop_pos(uart_port);
-                ESP_LOGI(TAG, "[UART PATTERN DETECTED] pos: %d, buffered size: %d", pos, buffered_size);
+                // ESP_LOGI(TAG, "[UART PATTERN DETECTED] pos: %d, buffered size: %d", pos, buffered_size);
                 if (pos == -1)
                 {
                     // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
@@ -108,15 +108,15 @@ void UART::uartEventWorker(void *pvParameters)
                     uint8_t pat[PATTERN_CHR_NUM + 1];
                     memset(pat, 0, sizeof(pat));
                     uart_read_bytes(uart_port, pat, PATTERN_CHR_NUM, 100 / portTICK_PERIOD_MS);
-                    ESP_LOGI(TAG, "read data: %s", dtmp);
-                    ESP_LOGI(TAG, "read pat : %s", pat);
+                    // ESP_LOGI(TAG, "read data: %s", dtmp);
+                    // ESP_LOGI(TAG, "read pat : %s", pat);
                 }
                 break;
             }
             // Others
             default:
             {
-                ESP_LOGI(TAG, "uart event type: %d", event.type);
+                // ESP_LOGI(TAG, "uart event type: %d", event.type);
                 break;
             }
             }
@@ -129,7 +129,7 @@ void UART::uartEventWorker(void *pvParameters)
 
 void UART::init(void)
 {
-    esp_log_level_set(TAG, ESP_LOG_INFO);
+    // esp_log_level_set(TAG, ESP_LOG_INFO);
 
     /* Configure parameters of an UART driver,
      * communication pins and install the driver */
@@ -144,7 +144,7 @@ void UART::init(void)
     uart_param_config(uart_port, &uart_config);
 
     // Set UART log level
-    esp_log_level_set(TAG, ESP_LOG_INFO);
+    // esp_log_level_set(TAG, ESP_LOG_INFO);
     // Set UART pins (using UART0 default pins ie no changes.)
     uart_set_pin(uart_port, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 

@@ -14,7 +14,6 @@
 class UDPPacketManager
 {
 private:
-    UART debugUART;
     // UART gnssUART;
     IPAddress myip;
     uint8_t aog2Count = 0;
@@ -61,7 +60,6 @@ private:
 
 public:
     UDPPacketManager(void gnssSendData(uint8_t *data, size_t len));
-    UDPPacketManager(UART debugUART, void gnssSendData(uint8_t *data, size_t len));
     bool initUDP();
     QueueHandle_t sendQueue = xQueueCreate(10, sizeof(struct QueueItem *));
 };

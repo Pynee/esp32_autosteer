@@ -15,7 +15,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/uart.h"
-#include "esp_log.h"
+// #include "esp_log.h"
 #include "Print.h"
 
 static const char *TAG = "uart_events";
@@ -43,7 +43,7 @@ class UART : public Print
 {
 private:
     uint8_t uart_port;
-    void init(void);
+
     static void startWorkerImpl(void *);
     void uartEventWorker(void *pvParameters);
     QueueHandle_t uart_queue;
@@ -53,6 +53,7 @@ public:
     UART();
     UART(uint8_t port);
     UART(uint8_t port, void callback(uint8_t *data, size_t len));
+    void init(void);
     void setCallback(void callback(uint8_t *data, size_t len));
     virtual size_t write(uint8_t);
     inline size_t write(unsigned long n) { return write((uint8_t)n); }

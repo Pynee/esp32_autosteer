@@ -4,11 +4,6 @@ UDPPacketManager::UDPPacketManager(void gnssSendData(uint8_t *data, size_t len))
 {
   this->gnssSendData = gnssSendData;
 }
-UDPPacketManager::UDPPacketManager(UART debugUART, void gnssSendData(uint8_t *data, size_t len))
-{
-  this->gnssSendData = gnssSendData;
-  this->debugUART = debugUART;
-}
 
 void UDPPacketManager::steerSettingsInit()
 {
@@ -26,7 +21,7 @@ bool UDPPacketManager::initUDP()
   {
     // Did not connect, print error message
     // Serial.println("failed to connect and hit timeout");
-    debugUART.println("failed to connect and hit timeout");
+    Serial.println("failed to connect and hit timeout");
 
     // Reset and try again
     ESP.restart();
@@ -38,17 +33,17 @@ bool UDPPacketManager::initUDP()
 
   myip = WiFi.localIP();
   // Connected!
-  debugUART.println("WiFi connected");
-  debugUART.print("IP address: ");
-  debugUART.println(WiFi.localIP());
+  Serial.println("WiFi connected");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
   // Serial.println("WiFi connected");
   // Serial.print("IP address: ");
   // Serial.println(WiFi.localIP());
 
   if (udp.listen(AOGAutoSteerPort))
   {
-    debugUART.print("UDP Listening on IP: ");
-    debugUART.println(WiFi.localIP());
+    Serial.print("UDP Listening on IP: ");
+    Serial.println(WiFi.localIP());
     // Serial.print("UDP Listening on IP: ");
     // Serial.println(WiFi.localIP());
     udp.onPacket([=](AsyncUDPPacket packet)
@@ -56,8 +51,8 @@ bool UDPPacketManager::initUDP()
 
     if (ntrip.listen(AOGNtripPort))
     {
-      debugUART.print("UDP Listening on IP: ");
-      debugUART.println(WiFi.localIP());
+      Serial.print("UDP Listening on IP: ");
+      Serial.println(WiFi.localIP());
       // Serial.print("UDP Listening on IP: ");
       // Serial.println(WiFi.localIP());
       ntrip.onPacket([=](AsyncUDPPacket packet)
@@ -70,9 +65,8 @@ bool UDPPacketManager::initUDP()
 
 void UDPPacketManager::startWorkerImpl(void *_this)
 {
-    ((IMUHandler *)_this)->sendDataTask(_this);
+  ((UDPPacketManager *)_this)->sendDataTask(_this);
 }
-
 
 void UDPPacketManager::ntripPacketProxy(AsyncUDPPacket packet)
 {
@@ -124,8 +118,8 @@ void UDPPacketManager::autoSteerPacketParser(AsyncUDPPacket udpPacket)
 
       if (data[lenght - 1] != (byte)CK_A)
       {
-        debugUART.print("Packet: CRC error: ");
-        debugUART.println(CK_A);
+        Serial.print("Packet: CRC error: ");
+        Serial.println(CK_A);
         // Serial.print("Packet: CRC error: ");
         // Serial.print(CK_A);
         printLnByteArray(data, lenght);
@@ -195,8 +189,8 @@ void UDPPacketManager::parsePacket(uint8_t *packet, int size, AsyncUDPPacket udp
   }
   else
   {
-    debugUART.print("Unknown packet!!!");
-    //Serial.print("Unknown packet!!!");
+    Serial.print("Unknown packet!!!");
+    // Serial.print("Unknown packet!!!");
     printLnByteArray(packet, size);
   }
 }
@@ -205,9 +199,9 @@ void UDPPacketManager::sendDataTask(void *z)
 {
   if (sendQueue == NULL)
   {
-    debugUART.print("queue creation failed!!");
-    //Serial.print("queue creation failed!!");
-    // queue creation failed!!
+    Serial.print("queue creation failed!!");
+    // Serial.print("queue creation failed!!");
+    //  queue creation failed!!
   }
   for (;;)
   {
@@ -237,13 +231,13 @@ void UDPPacketManager::printLnByteArray(uint8_t *data, uint8_t datalen)
 {
   for (int i = 0; i < datalen; i++)
   {
-    debugUART.print(data[i]);
-    debugUART.print(" ");
-    //Serial.print(data[i]);
-    //Serial.print(" ");
+    Serial.print(data[i]);
+    Serial.print(" ");
+    // Serial.print(data[i]);
+    // Serial.print(" ");
   }
-  //Serial.println();
-  debugUART.println();
+  // Serial.println();
+  Serial.println();
 }
 
 void UDPPacketManager::parseSteerData(uint8_t *packet)

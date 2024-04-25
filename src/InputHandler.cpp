@@ -7,6 +7,7 @@ void inputWorker(void *z)
 
   for (;;) // Input Loop
   {
+    // Serial.println("Reading pins...");
     hardwareSwitches.workSwitch.read();  // read hardware workSwitch
     hardwareSwitches.steerSwitch.read(); // read hardware steerSwitch
     // Put workSwitch in first, steerSwitch in second and remoteSwitch to third bit in switchByte
@@ -18,7 +19,7 @@ void inputWorker(void *z)
       sensors.loadSensor.read(); // update loadSensor/currentSensor
     }
 
-    vTaskDelayUntil(&xLastWakeTime, LOOP_TIME);
+    vTaskDelayUntil(&xLastWakeTime, LOOP_TIME / portTICK_PERIOD_MS);
   }
 }
 void initInput()
