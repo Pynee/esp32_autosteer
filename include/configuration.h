@@ -37,9 +37,9 @@
 #define PWM2_RPWM 14
 
 //--------------------------- Switch Input Pins ------------------------
-#define STEERSW_PIN 5 // Steerswitch
-#define WORKSW_PIN 6  // Workswitch
-#define REMOTE_PIN 7  // No idea how this is meant to work. Propably doesn't
+#define STEERSW_PIN 11 // Steerswitch
+#define WORKSW_PIN 12  // Workswitch
+#define REMOTE_PIN 13  // No idea how this is meant to work. Propably doesn't
 
 // How many degrees before decreasing Max PWM
 #define LOW_HIGH_DEGREES 3.0

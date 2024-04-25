@@ -6,49 +6,80 @@ IMUHandler::IMUHandler()
 
 void IMUHandler::initIMU()
 {
-    // set up communication
-    Wire.begin();
-    for (int16_t i = 0; i < nrBNO08xAdresses; i++)
+    Serial.begin(115200);
+
+    Serial.println("Adafruit BNO08x test!");
+
+    // Try to initialize!
+    if (!bno08x.begin_I2C())
     {
-        bno08xAddress = bno08xAddresses[i];
+        Serial.println("Failed to find BNO08x chip");
+    }
+    else
+    {
+        Serial.println("BNO08x Found!");
+        useBNO08x = true;
 
-        // Serial.print("\r\nChecking for BNO08X on ");
-        // Serial.println(bno08xAddress, HEX);
-        Wire.beginTransmission(bno08xAddress);
-        error = Wire.endTransmission();
-
-        if (error == 0)
+        for (int n = 0; n < bno08x.prodIds.numEntries; n++)
         {
-            // Serial.println("Error = 0");
-            Serial.print("0x");
-            Serial.print(bno08xAddress, HEX);
-            Serial.println(" BNO08X Ok.");
-            // Initialize BNO080 lib
-            if (bno08x.begin_I2C((int32_t)bno08xAddress)) //??? Passing NULL to non pointer argument, remove maybe ???
-            {
-                setReports();
-                useBNO08x = true;
-            }
-            else
-            {
-                Serial.println("BNO080 not detected at given I2C address.");
-            }
+            Serial.print("Part ");
+            Serial.print(bno08x.prodIds.entry[n].swPartNumber);
+            Serial.print(": Version :");
+            Serial.print(bno08x.prodIds.entry[n].swVersionMajor);
+            Serial.print(".");
+            Serial.print(bno08x.prodIds.entry[n].swVersionMinor);
+            Serial.print(".");
+            Serial.print(bno08x.prodIds.entry[n].swVersionPatch);
+            Serial.print(" Build ");
+            Serial.println(bno08x.prodIds.entry[n].swBuildNumber);
+        }
+
+        setReports();
+
+        Serial.println("Reading events");
+        delay(100);
+        /*Serial.println("Adafruit BNO08x test!");
+
+        // Try to initialize!
+        if (!bno08x.begin_I2C())
+        {
+            Serial.println("Failed to find BNO08x chip");
         }
         else
         {
-            // Serial.println("Error = 4");
-            Serial.print("0x");
-            Serial.print(bno08xAddress, HEX);
-            Serial.println(" BNO08X not Connected or Found");
-        }
-        if (useBNO08x)
+            Serial.println("BNO08x Found!");
+            Serial.println("Reading events");
+
+     setReports();*/
+
+        // imuTS.enable();
+
+        if (!bno08x.getSensorEvent(&sensorValue))
         {
-            // imuTS.enable();
-            xTaskCreate(this->startWorkerImpl, "imuWorker", 3096, NULL, 3, NULL);
-            break;
+            return;
+        }
+        else
+        {
+            switch (sensorValue.sensorId)
+            {
+
+            case SH2_GAME_ROTATION_VECTOR:
+                Serial.print("Game Rotation Vector - r: ");
+                Serial.print(sensorValue.un.gameRotationVector.real);
+                Serial.print(" i: ");
+                Serial.print(sensorValue.un.gameRotationVector.i);
+                Serial.print(" j: ");
+                Serial.print(sensorValue.un.gameRotationVector.j);
+                Serial.print(" k: ");
+                Serial.println(sensorValue.un.gameRotationVector.k);
+                break;
+            }
         }
     }
+
+    xTaskCreate(this->startWorkerImpl, "imuWorker", 8192, NULL, 3, NULL);
 }
+
 void IMUHandler::startWorkerImpl(void *_this)
 {
     ((IMUHandler *)_this)->imuWorker(_this);
@@ -56,12 +87,33 @@ void IMUHandler::startWorkerImpl(void *_this)
 
 void IMUHandler::imuWorker(void *z)
 {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     for (;;)
     {
-        if (!useBNO08x)
-        {
-            return;
-        }
+        /*
+                if (bno08x.wasReset())
+                {
+                    Serial.print("sensor was reset ");
+                    setReports();
+                }
+
+                if (!bno08x.getSensorEvent(&sensorValue))
+                {
+                    return;
+                }
+
+                switch (sensorValue.sensorId)
+                {
+
+                case SH2_GAME_ROTATION_VECTOR:
+                    saveQuaternion(sensorValue.un.gameRotationVector.real, sensorValue.un.gameRotationVector.i, sensorValue.un.gameRotationVector.j, sensorValue.un.gameRotationVector.k, &imuVector);
+                    break;
+                }
+
+        */
+        vTaskDelayUntil(&xLastWakeTime, 20 / portTICK_PERIOD_MS);
+        delay(10);
+
         if (bno08x.wasReset())
         {
             Serial.print("sensor was reset ");
@@ -77,7 +129,14 @@ void IMUHandler::imuWorker(void *z)
         {
 
         case SH2_GAME_ROTATION_VECTOR:
-            saveQuaternion(sensorValue.un.gameRotationVector.real, sensorValue.un.gameRotationVector.i, sensorValue.un.gameRotationVector.j, sensorValue.un.gameRotationVector.k, &imuVector);
+            Serial.print("Game Rotation Vector - r: ");
+            Serial.print(sensorValue.un.gameRotationVector.real);
+            Serial.print(" i: ");
+            Serial.print(sensorValue.un.gameRotationVector.i);
+            Serial.print(" j: ");
+            Serial.print(sensorValue.un.gameRotationVector.j);
+            Serial.print(" k: ");
+            Serial.println(sensorValue.un.gameRotationVector.k);
             break;
         }
     }

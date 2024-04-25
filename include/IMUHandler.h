@@ -4,6 +4,12 @@
 #include <Adafruit_BNO08x.h>
 #include "configuration.h"
 
+#define BNO08X_RESET -1
+
+// For SPI mode, we need a CS pin
+// #define BNO08X_CS 10
+// #define BNO08X_INT 9
+
 #define RAD_TO_DEG_X_10 572.95779513082320876798154814105
 
 struct IMUVector

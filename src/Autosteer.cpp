@@ -150,6 +150,6 @@ void autosteerWorker(void *z)
             }
         }
 
-        vTaskDelayUntil(&xLastWakeTime, LOOP_TIME);
+        vTaskDelayUntil(&xLastWakeTime, LOOP_TIME / portTICK_PERIOD_MS);
     }
 }
