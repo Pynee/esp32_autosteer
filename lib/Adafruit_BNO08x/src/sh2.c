@@ -32,7 +32,7 @@
 #include "sh2_err.h"
 #include "shtp.h"
 #include "sh2_util.h"
-#include <Arduino.h>
+
 #include <string.h>
 
 // ------------------------------------------------------------------------
@@ -1705,7 +1705,7 @@ int sh2_open(sh2_Hal_t *pHal,
     
     // Validate parameters
     if (pHal == 0) return SH2_ERR_BAD_PARAM;
-    
+
     // Clear everything in sh2 structure.
     memset(&_sh2, 0, sizeof(_sh2));
         
@@ -1718,8 +1718,7 @@ int sh2_open(sh2_Hal_t *pHal,
     pSh2->eventCookie = eventCookie;
     pSh2->sensorCallback = 0;
     pSh2->sensorCookie = 0;
-    
-    //Serial.println("Täällä sh2 open");
+
     // Open SHTP layer
     pSh2->pShtp = shtp_open(pSh2->pHal);
     if (pSh2->pShtp == 0) {
@@ -1741,13 +1740,11 @@ int sh2_open(sh2_Hal_t *pHal,
     // Register EXECUTABLE handlers
     shtp_listenAdvert(pSh2->pShtp, GUID_EXECUTABLE, executableAdvertHdlr, &_sh2);
     shtp_listenChan(pSh2->pShtp, GUID_EXECUTABLE, "device", executableDeviceHdlr, &_sh2);
-    
+
     // Wait for reset notifications to arrive.
     // The client can't talk to the sensor hub until that happens.
     uint32_t start_us = pSh2->pHal->getTimeUs(pSh2->pHal);
     uint32_t now_us = start_us;
-
-    
     while (((now_us - start_us) < ADVERT_TIMEOUT_US) &&
            (!pSh2->resetComplete))
     {
@@ -1796,7 +1793,6 @@ void sh2_service(void)
  */
 int sh2_setSensorCallback(sh2_SensorCallback_t *callback, void *cookie)
 {
-
     sh2_t *pSh2 = &_sh2;
     
     pSh2->sensorCallback = callback;

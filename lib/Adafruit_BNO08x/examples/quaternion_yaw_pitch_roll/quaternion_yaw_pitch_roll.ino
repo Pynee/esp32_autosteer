@@ -5,8 +5,8 @@
 #include <Adafruit_BNO08x.h>
 
 // For SPI mode, we need a CS pin
-//#define BNO08X_CS 10
-//#define BNO08X_INT 9
+#define BNO08X_CS 10
+#define BNO08X_INT 9
 
 
 // #define FAST_MODE
@@ -49,14 +49,14 @@ void setup(void) {
   Serial.println("Adafruit BNO08x test!");
 
   // Try to initialize!
-  //if (!bno08x.begin_I2C()) {
-  if (!bno08x.begin_UART(&Serial1)) {  // Requires a device with > 300 byte UART buffer!
+  if (!bno08x.begin_I2C()) {
+  //if (!bno08x.begin_UART(&Serial1)) {  // Requires a device with > 300 byte UART buffer!
   //if (!bno08x.begin_SPI(BNO08X_CS, BNO08X_INT)) {
     Serial.println("Failed to find BNO08x chip");
-  
-  }else{
-    Serial.println("BNO08x Found!");
+    while (1) { delay(10); }
   }
+  Serial.println("BNO08x Found!");
+
 
   setReports(reportType, reportIntervalUs);
 
