@@ -27,3 +27,7 @@
 	url = https://github.com/r-downing/AutoPID.git
 	branch = master
 
+[submodule "esp32_BNO08x"]
+	path = esp32_BNO08x
+	url = https://github.com/myles-parfeniuk/esp32_BNO08x.git
+	branch = main
