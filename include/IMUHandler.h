@@ -3,12 +3,13 @@
 
 #include <Adafruit_BNO08x.h>
 #include "configuration.h"
+#include "GlobalVariables.h"
 
-#define BNO08X_RESET -1
+#define BNO08X_RESET 5
 
 // For SPI mode, we need a CS pin
-// #define BNO08X_CS 10
-// #define BNO08X_INT 9
+#define BNO08X_CS 10
+#define BNO08X_INT 9
 
 #define RAD_TO_DEG_X_10 572.95779513082320876798154814105
 
@@ -35,29 +36,18 @@ const uint8_t bno08xAddresses[] = {0x4A, 0x4B};
 class IMUHandler
 {
 private:
-    sh2_SensorValue_t sensorValue;
-    Adafruit_BNO08x bno08x;
-    const int16_t nrBNO08xAdresses = sizeof(bno08xAddresses) / sizeof(bno08xAddresses[0]);
-    uint8_t bno08xAddress;
-    void saveQuaternion(float qr, float qi, float qj, float qk, IMUVector *imuVector);
-    void quaternionToEuler(float qr, float qi, float qj, float qk, euler_t *ypr);
-    static void startWorkerImpl(void *);
+    void quaternionToEuler(IMUVector *imuVector, euler_t *rotationAxes);
+    void saveToGlobal(euler_t *rotationAxes);
+    static void startWorkerImpl(void *_this);
     void imuWorker(void *z);
     void setReports();
-    uint8_t error;
-    euler_t ypr;
+    euler_t rotationAxes;
     IMUVector imuVector;
 
 public:
     IMUHandler();
-    void initIMU();
+    void init();
     void calculateEuler();
-    char imuHeading[6];
-    char imuRoll[6];
-    char imuPitch[6];
-    char imuYawRate[6];
-    // booleans to see if we are using BNO08x
-    bool useBNO08x = false;
 };
 
 #endif

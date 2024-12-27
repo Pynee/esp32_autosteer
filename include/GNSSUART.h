@@ -9,6 +9,7 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+#include <Arduino.h>
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -36,24 +37,25 @@ static const char *TAG = "uart_events";
 #define EX_UART_NUM UART_NUM_0
 #define PATTERN_CHR_NUM (3) /*!< Set the number of consecutive and identical characters received by receiver which defines a UART pattern*/
 
-#define BUF_SIZE (1024)
+#define UART_BUFFER_SIZE (1024)
 #define RD_BUF_SIZE (BUF_SIZE)
 
-class UART : public Print
+class GNSSUART : public Print
 {
 private:
-    uint8_t uart_port;
+    uint8_t port = 0;
 
     static void startWorkerImpl(void *);
     void uartEventWorker(void *pvParameters);
-    QueueHandle_t uart_queue;
+    QueueHandle_t uartQueue;
     void (*callback)(uint8_t *data, size_t len);
 
 public:
-    UART();
-    UART(uint8_t port);
-    UART(uint8_t port, void callback(uint8_t *data, size_t len));
-    void init(void);
+    GNSSUART();
+    GNSSUART(uint8_t port);
+    GNSSUART(uint8_t port, void callback(uint8_t *data, size_t len));
+    void init();
+    void init(int TX_PIN, int RX_PIN);
     void setCallback(void callback(uint8_t *data, size_t len));
     virtual size_t write(uint8_t);
     inline size_t write(unsigned long n) { return write((uint8_t)n); }

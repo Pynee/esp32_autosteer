@@ -4,6 +4,7 @@
 #include <SimpleKalmanFilter.h>
 #include <Arduino.h>
 #include "configuration.h"
+#include "GlobalVariables.h"
 #include "Button.h"
 void initInput();
 

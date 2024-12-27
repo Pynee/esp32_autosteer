@@ -3,47 +3,41 @@ uint8_t watchdogTimer = WATCHDOG_FORCE_VALUE;
 double pidOutput = 0;
 AutoPID pid(&(dataToSend.currentSteerAngle),
             &(receivedData.steerTargetAngle),
-            &(dataToSend.currentSteerAngle),
-            -255.0,
-            255.0,
+            &(pidOutput),
+            -255,
+            255,
             (double)steerSettings.Kp,
             (double)steerSettings.Ki,
             (double)steerSettings.Kd);
 
 void initAutosteer()
 {
-
     ledcSetup(0, PWM_Frequency, 8);
     ledcAttachPin(PWM1_LPWM, 0);
     ledcWrite(0, 0);
 
     ledcSetup(1, PWM_Frequency, 8);
     ledcAttachPin(PWM2_RPWM, 1);
-    ledcWrite(0, 0);
+    ledcWrite(1, 0);
 
     pinMode(DIR1_RL_ENABLE_PIN, OUTPUT);
+    gpio_set_direction(gpio_num_t(DIR1_RL_ENABLE_PIN), GPIO_MODE_OUTPUT);
 
-    xTaskCreate(autosteerWorker, "autosteerWorker", 3096, NULL, 3, NULL);
+    xTaskCreate(autosteerWorker, "autosteerWorker", 4096, NULL, 3, NULL);
 }
 
 void autosteerWorker(void *z)
 {
-    constexpr TickType_t xFrequency = 10;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     pid.setTimeStep(LOOP_TIME);
 
-    // auto queue = xQueueCreate(16, sizeof(CborPackageBase *));
-    // cborQueueSelector.addQueue(steerConfig.qogChannelIdAutosteerEnable, queue);
-    // cborQueueSelector.addQueue(steerConfig.qogChannelIdSetpointSteerAngle, queue);
-
     for (;;)
     {
-        time_t timeoutPoint = millis() - Timeout;
 
         // check for timeout and data from AgOpenGPS
-        if (watchdogTimer < WATCHDOG_THRESHOLD && state.autoSteerEnabled)
+        if (!state.guidanceStatus || millis() > state.lastAOGUpdate + AOGTIMEOUT || hardwareSwitches.steerSwitch.getState() || receivedData.gpsSpeed < 0.1)
         {
-            // steerSetpoints.enabled = false;
+            // Serial.println("Disabled autosteer");
             state.autoSteerEnabled = false;
 
             if (steerConfig.IsDanfoss)
@@ -56,11 +50,11 @@ void autosteerWorker(void *z)
                 ledcWrite(0, 0);
                 ledcWrite(1, 0);
             }
-
-            digitalWrite(DIR1_RL_ENABLE_PIN, LOW);
+            gpio_set_level(gpio_num_t(DIR1_RL_ENABLE_PIN), 0);
         }
         else
         {
+            state.autoSteerEnabled = true;
             pid.setGains(
                 (double)steerSettings.Kp,
                 (double)steerSettings.Ki,
@@ -79,74 +73,57 @@ void autosteerWorker(void *z)
 
             // here comes the magic: executing the PID loop
             // the values are given by pointers, so the AutoPID gets them automaticaly
-            pid.run();
+            // pid.run();
 
-            if (pidOutput)
+            double motorOutput = steerConfig.InvertWAS ? pidOutput : -pidOutput;
+
+            if (steerConfig.IsDanfoss)
             {
-                double motorOutput = steerConfig.InvertWAS ? pidOutput : -pidOutput;
-
-                if (motorOutput < 0 && motorOutput > -steerSettings.minPWM)
-                {
-                    motorOutput = -steerSettings.minPWM;
-                }
-
-                if (motorOutput > 0 && motorOutput < steerSettings.minPWM)
-                {
-                    motorOutput = steerSettings.minPWM;
-                }
-
-                else if (steerConfig.CytronDriver) // If Cytron
-                {
-                    if (motorOutput >= 0)
-                    {
-                        ledcWrite(1, 255);
-                    }
-                    else
-                    {
-                        ledcWrite(0, 255);
-                        motorOutput = -motorOutput;
-                    }
-
-                    ledcWrite(0, motorOutput);
-                    digitalWrite(DIR1_RL_ENABLE_PIN, HIGH);
-                }
-                else if (steerConfig.IsDanfoss) // If Danfoss hydraylic steering
-                {
-                    // go from 25% on: max left, 50% on: center, 75% on: right max
-                    if (motorOutput > 250)
-                    {
-                        motorOutput = 250;
-                    }
-
-                    if (motorOutput < -250)
-                    {
-                        motorOutput = -250;
-                    }
-
-                    motorOutput /= 4;
-                    motorOutput += 128;
-                    ledcWrite(0, motorOutput);
-                }
-                else // default is IBT2
-                {
-                    if (motorOutput >= 0)
-                    {
-                        ledcWrite(0, motorOutput);
-                        ledcWrite(1, 0);
-                    }
-
-                    if (motorOutput < 0)
-                    {
-                        ledcWrite(0, 0);
-                        ledcWrite(1, -motorOutput);
-                    }
-                    digitalWrite(DIR1_RL_ENABLE_PIN, HIGH);
-                }
+                // go from 25% on: max left, 50% on: center, 75% on: right max
+                // motorOutput = constrain(motorOutput, -250.0, 250.0);// Constrain output max/min values for some reason?
+                map(motorOutput, -255.0, 255.0, 65.0, 190.0); // map (-250;250) range to (65;190);
             }
             else
             {
-                ledcWrite(0, 0);
-                ledcWrite(1, 0);
+                // Constrains the PWM value so it doesn't go below min or over max
+                if (motorOutput < 0)
+                {
+                    motorOutput = min(motorOutput, (double)-steerSettings.minPWM);
+                }
+                else
+                {
+                    motorOutput = max(motorOutput, (double)steerSettings.minPWM);
+                }
+                motorOutput = constrain(motorOutput, (double)-steerSettings.highPWM, (double)steerSettings.highPWM);
+            }
+
+            if (steerConfig.CytronDriver) // If Cytron
+            {
+                if (motorOutput < 0)
+                {
+                    motorOutput = -motorOutput;
+                    gpio_set_level(gpio_num_t(DIR1_RL_ENABLE_PIN), 1);
+                }
+                else
+                {
+                    gpio_set_level(gpio_num_t(DIR1_RL_ENABLE_PIN), 0);
+                }
+                ledcWrite(0, motorOutput);
+            }
+            else // we can use same outputs for IBT2 and hydraulic because hydraulic is always positive
+            {
+
+                if (motorOutput < 0)
+                {
+                    ledcWrite(0, 0);
+                    ledcWrite(1, -motorOutput);
+                }
+                else
+                {
+                    ledcWrite(1, 0);
+                    ledcWrite(0, motorOutput);
+                }
+                gpio_set_level(gpio_num_t(DIR1_RL_ENABLE_PIN), 1);
             }
         }
 

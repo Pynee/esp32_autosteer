@@ -26,8 +26,12 @@
 	path = lib/AutoPID
 	url = https://github.com/r-downing/AutoPID.git
 	branch = master
-
 [submodule "esp32_BNO08x"]
-	path = esp32_BNO08x
+	path = /lib/esp32_BNO08x
 	url = https://github.com/myles-parfeniuk/esp32_BNO08x.git
 	branch = main
+[submodule "AsyncUDP_ESP32_Ethernet"]
+	path = /lib/AsyncUDP_ESP32_Ethernet
+	url = https://github.com/khoih-prog/AsyncUDP_ESP32_Ethernet.git
+	branch = main
+	

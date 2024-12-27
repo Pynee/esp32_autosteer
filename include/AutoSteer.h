@@ -7,6 +7,7 @@
 #include <string.h>
 #include <AutoPID.h>
 #include "configuration.h"
+#include "GlobalVariables.h"
 
 #include <sstream> // std::stringstream
 #include <string>  // std::string

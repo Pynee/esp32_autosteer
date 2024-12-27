@@ -5,22 +5,23 @@
 #include "UDPPacketManager.h"
 #include "IMUHandler.h"
 #include "configuration.h"
-
-// Conversion to Hexidecimal
+#include "PGNCommManager.h"
 
 class PandaBuilder
 {
 private:
     const char *asciiHex = "0123456789ABCDEF";
-    void BuildNmea(void);
-    void CalculateChecksum(void);
-    // the new PANDA sentence buffer
-    char nmea[100];
-    UDPPacketManager *packetManager;
-    IMUHandler *imuHandler;
+    // void BuildNmea(void);
+    uint8_t calculateChecksum(char *packet);
+
+    PGNCommManager *pgnmanager;
+    // IMUHandler *imuHandler;
+    unsigned long prevTime;
 
 public:
-    PandaBuilder(UDPPacketManager *packetManager, IMUHandler *imuHandler);
+    // the new PANDA sentence buffer
+    char nmea[100];
+    PandaBuilder(PGNCommManager *PGNManager);
     void buildPanda(NMEAMessage *nmeaMessage);
 };
 #endif

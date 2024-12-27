@@ -1,23 +1,22 @@
 #include "UDPPacketManager.h"
+// Forward declaration
+#include "PGNCommManager.h"
+#include "SetupPage.h"
 
 UDPPacketManager::UDPPacketManager(void gnssSendData(uint8_t *data, size_t len))
 {
   this->gnssSendData = gnssSendData;
 }
 
-void UDPPacketManager::steerSettingsInit()
+bool UDPPacketManager::init(PGNCommManager *commManager)
 {
-  // for PWM High to Low interpolator
-  receivedData.highLowPerDeg = ((float)(steerSettings.highPWM - steerSettings.lowPWM)) / LOW_HIGH_DEGREES;
-}
+  this->pgnCommManager = commManager;
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
 
-bool UDPPacketManager::initUDP()
-{
-  // sendDatafn = *sendData;
-  //  Supress Debug information
-  wfm.setDebugOutput(false);
+  WiFi.useStaticBuffers(true);
+  esp_wifi_set_ps(WIFI_PS_NONE);
 
-  if (!wfm.autoConnect("ESP32AGOpenGPS"))
+  /*if (!wfm.autoConnect("ESP32AGOpenGPS"))
   {
     // Did not connect, print error message
     // Serial.println("failed to connect and hit timeout");
@@ -26,40 +25,11 @@ bool UDPPacketManager::initUDP()
     // Reset and try again
     ESP.restart();
     delay(1000);
-  }
+  }*/
 
-  WiFi.useStaticBuffers(true);
-  esp_wifi_set_ps(WIFI_PS_NONE);
+  xTaskCreate(this->startWifimanagerWorker, "WifiManagerWorker", 16384, this, 3, NULL);
+  xTaskCreate(this->startWorkerImpl, "UdpSendDataTask", 8192, this, 3, NULL);
 
-  myip = WiFi.localIP();
-  // Connected!
-  Serial.println("WiFi connected");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  // Serial.println("WiFi connected");
-  // Serial.print("IP address: ");
-  // Serial.println(WiFi.localIP());
-
-  if (udp.listen(AOGAutoSteerPort))
-  {
-    Serial.print("UDP Listening on IP: ");
-    Serial.println(WiFi.localIP());
-    // Serial.print("UDP Listening on IP: ");
-    // Serial.println(WiFi.localIP());
-    udp.onPacket([=](AsyncUDPPacket packet)
-                 { autoSteerPacketParser(packet); });
-
-    if (ntrip.listen(AOGNtripPort))
-    {
-      Serial.print("UDP Listening on IP: ");
-      Serial.println(WiFi.localIP());
-      // Serial.print("UDP Listening on IP: ");
-      // Serial.println(WiFi.localIP());
-      ntrip.onPacket([=](AsyncUDPPacket packet)
-                     { ntripPacketProxy(packet); });
-    }
-  }
-  xTaskCreate(this->startWorkerImpl, "UdpSendDataTask", 3096, NULL, 3, NULL);
   return true;
 }
 
@@ -79,120 +49,41 @@ void UDPPacketManager::ntripPacketProxy(AsyncUDPPacket packet)
 
 void UDPPacketManager::autoSteerPacketParser(AsyncUDPPacket udpPacket)
 {
-  if (ipDesIsSet && udpPacket.remoteIP() != ipDes || udpPacket.length() <= 0)
+  uint8_t testData[32];
+  // Serial.println(udpPacket.length());
+  if (destinationIPSet && udpPacket.remoteIP() != destinationIP || udpPacket.length() <= 7 || udpPacket.length() > 128)
   {
+    Serial.println("Not our packet!");
     return;
-  }
-
-  buffer = udpPacket.data();
-  for (int i = 0; i < udpPacket.length(); i++)
-  {
-    data[bufferIndex] = buffer[i];
-    bufferIndex++;
-  }
-  if (bufferIndex < 4)
-  {
-    return;
-  }
-  for (int i = 0; i < bufferIndex; i++)
-  {
-    if (data[i] == 128 && data[i + 1] == 129)
-    {
-      int lenght = data[i + 4] + 6;
-      if (lenght > i + bufferIndex + 1) //???
-      {
-        break;
-      }
-      for (int x = 0; x < lenght; x++)
-      {
-        data[x] = data[i + x];
-      }
-
-      bufferIndex -= lenght;
-      i = -1;
-      byte CK_A = 0;
-      for (int j = 2; j < lenght - 1; j++)
-      {
-        CK_A += data[j];
-      }
-
-      if (data[lenght - 1] != (byte)CK_A)
-      {
-        Serial.print("Packet: CRC error: ");
-        Serial.println(CK_A);
-        // Serial.print("Packet: CRC error: ");
-        // Serial.print(CK_A);
-        printLnByteArray(data, lenght);
-        break;
-      }
-
-      parsePacket(data, lenght, udpPacket);
-    }
-  }
-}
-
-void UDPPacketManager::parsePacket(uint8_t *packet, int size, AsyncUDPPacket udpPacket)
-{
-
-  if (packet[0] == 0x80 && packet[1] == 0x81 && packet[2] == 0x7F) // Data
-  {
-    switch (packet[3])
-    {
-    case 0xFE: // Steer Data
-    {
-      parseSteerData(packet);
-      break;
-    }
-    case 252: // Steer settings
-    {         // 0xFC
-      parseSteerSettings(packet);
-      break;
-    }
-    case 251: // SteerConfig
-    {
-      parseSteerConfig(packet);
-      break;
-    }
-    case 200: // Hello Sent To Module
-    {
-
-      int16_t sa = (int16_t)(dataToSend.currentSteerAngle * 100);
-
-      helloFromAutoSteer[5] = (uint8_t)sa;
-      helloFromAutoSteer[6] = sa >> 8;
-
-      helloFromAutoSteer[7] = (uint8_t)dataToSend.helloSteerPosition;
-      helloFromAutoSteer[8] = dataToSend.helloSteerPosition >> 8;
-      helloFromAutoSteer[9] = hardwareSwitches.switchByte;
-      QueueItem item = {helloFromAutoSteer, sizeof(helloFromAutoSteer)};
-      xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
-      // QueueItem item = {helloFromIMU, sizeof(helloFromIMU)};
-      // xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
-    }
-    case 202: // Scan Request
-    {
-      // make really sure this is the reply pgn
-      if (packet[4] == 3 && packet[5] == 202 && packet[6] == 202)
-      {
-        ipDes = udpPacket.remoteIP();
-        ipDesIsSet = true;
-        // hello from AgIO
-        uint8_t scanReply[] = {128, 129, 126, 203, 7,
-                               myip[0], myip[1], myip[2], myip[3],
-                               myip[0], myip[1], myip[2], 23};
-
-        QueueItem item = {scanReply, sizeof(scanReply)};
-        xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
-      }
-    }
-    }
   }
   else
   {
-    Serial.print("Unknown packet!!!");
-    // Serial.print("Unknown packet!!!");
-    printLnByteArray(packet, size);
+
+    // Serial.println(udpPacket.length());
+    udpPacket.read(this->data, udpPacket.length());
+    /*
+    Serial.print("Packet: ");
+    for (int i = 0; i < udpPacket.length(); i++)
+    {
+      Serial.print(data[i]);
+      Serial.print(", ");
+    }
+
+    Serial.println("Copy successful");
+    */
+    if (!destinationIPSet && this->data[0] == 0x80 && this->data[1] == 0x81 && this->data[2] == 0x7F && this->data[4] == 3 && this->data[5] == 202 && this->data[6] == 202)
+    {
+      // Set destination ip so we can stop floding the network with broadcasts
+      destinationIP = udpPacket.remoteIP();
+      destinationIPSet = true;
+    }
+
+    QueueItem item = {this->data, udpPacket.length()};
+    xQueueSend(pgnCommManager->managerReceiveQueue, &item, (TickType_t)0);
+    //(void *)
+    // delete &item;
   }
+  return;
 }
 
 void UDPPacketManager::sendDataTask(void *z)
@@ -205,147 +96,212 @@ void UDPPacketManager::sendDataTask(void *z)
   }
   for (;;)
   {
-    while (uxQueueMessagesWaiting(sendQueue))
+    // while (uxQueueMessagesWaiting(sendQueue))
+    //{
+    QueueItem queueItem;
+    std::string *receivedString = nullptr;
+
+    if (xQueueReceive(sendQueue, &queueItem, portMAX_DELAY) == pdTRUE)
     {
-      QueueItem *queueItem = nullptr;
+      // Serial.println(uxQueueMessagesWaiting(sendQueue));
 
-      if (xQueueReceive(sendQueue, &queueItem, 0) == pdTRUE)
+      // if (queueItem.data[3] == 121 && queueItem.data[2] == 121)
+      //{
+      //   Serial.println(reinterpret_cast<intptr_t>(queueItem.data + 11));
+      //   Serial.println(queueItem.data[10]);
+      // }
+      AsyncUDPMessage message = AsyncUDPMessage(queueItem.length);
+      message.write(queueItem.data, queueItem.length);
+      udp.sendTo(message, destinationIP, DestinationPort);
+      // delete receivedString;
+      //}
+    }
+  }
+  vTaskDelete(NULL);
+}
+
+void UDPPacketManager::startWifimanagerWorker(void *_this)
+{
+  ((UDPPacketManager *)_this)->wifimanagerWorker(_this);
+}
+
+void UDPPacketManager::wifimanagerWorker(void *z)
+{
+
+  UDPPacketManager *l_pThis = (UDPPacketManager *)z;
+  Serial.println((int)&l_pThis);
+  bool socketsStarted = false;
+  WiFiManager wifiManager;
+  std::string testStrings[] = {"1", "2"};
+  std::string name = "test";
+  std::string testString = inputSelect("test", testStrings, 2, 0);
+  WiFiManagerParameter custom_html("<p style=\"font-weight:Bold;\">AgOpenGPS Settings</p>"); // only custom html
+  WiFiManagerParameter testSelect(testString.c_str());
+  // WiFiManagerParameter custom_mqtt_server("server", "mqtt server", "", 40);
+  // WiFiManagerParameter custom_mqtt_port("port", "mqtt port", "", 6);
+  // WiFiManagerParameter custom_token("api_token", "api token", "", 16);
+  // WiFiManagerParameter custom_tokenb("invalid token", "invalid token", "", 0);                                                  // id is invalid, cannot contain spaces
+  // WiFiManagerParameter custom_ipaddress("input_ip", "input IP", "", 15, "pattern='\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}'"); // custom input attrs (ip mask)
+  // WiFiManagerParameter custom_input_type("input_pwd", "input pass", "", 15, "type='password'");                                 // custom input attrs (ip mask)
+  WiFiManagerParameter custom_send_data("<p style=\"font-weight:Bold;\">Send data to:</p>");
+  const char _customHtml_checkbox[] = "type=\"checkbox\"";
+  WiFiManagerParameter custom_checkbox_Serial("my_serial", "Serial", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER);
+  WiFiManagerParameter custom_checkbox_Wifi("my_wifi", "WIFI", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER);
+  WiFiManagerParameter custom_checkbox_Ethernet("my_ethernet", "Ethernet", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER);
+  WiFiManagerParameter custom_checkbox_CAN("my_can", "CAN", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER);
+  Serial.print(testSelect.getCustomHTML());
+  setupParameters[0].customString = inputSelect(setupParameters[0].name, setupParameters[0].selectStrings, setupParameters[0].selectAmount, setupParameters[0].selected);
+  WiFiManagerParameter test(setupParameters[0].customString.c_str());
+  wifiManager.addParameter(&test);
+  const char *bufferStr = R"(
+  <!-- INPUT CHOICE -->
+  <br/>
+  <p>Select IMU</p>
+  <input style='display: inline-block;' type='radio' id='choice1' name='program_selection' value='1'>
+  <label for='choice1'>BNO085/BNO055</label><br/>
+  <input style='display: inline-block;' type='radio' id='choice2' name='program_selection' value='2'>
+  <label for='choice2'>???</label><br/>
+
+  <!-- INPUT SELECT -->
+  <br/>
+  <label for='input_select'>IMU connection</label>
+  <select name="input_select" id="input_select" class="button">
+  <option value="0">I2C</option>
+  <option value="1" selected>I2C RVC</option>
+  <option value="2">SPI</option>
+  </select>
+  )";
+
+  WiFiManagerParameter custom_html_inputs(bufferStr);
+  custom_html_inputs.setValue("", 1);
+  // add all your parameters here
+  wifiManager.addParameter(&custom_html);
+  wifiManager.addParameter(&testSelect);
+  // wifiManager.addParameter(&custom_mqtt_server);
+  // wifiManager.addParameter(&custom_mqtt_port);
+  // wifiManager.addParameter(&custom_token);
+  // wifiManager.addParameter(&custom_tokenb);
+  // wifiManager.addParameter(&custom_ipaddress);
+  wifiManager.addParameter(&custom_send_data);
+  wifiManager.addParameter(&custom_checkbox_Serial);
+  wifiManager.addParameter(&custom_checkbox_Wifi);
+  wifiManager.addParameter(&custom_checkbox_Ethernet);
+  wifiManager.addParameter(&custom_checkbox_CAN);
+  // wifiManager.addParameter(&custom_input_type);
+
+  wifiManager.addParameter(&custom_html_inputs);
+
+  // set values later if you want
+  // custom_html.setValue("test", 4);
+  // custom_token.setValue("test", 4);
+
+  // const char* icon = "
+  // <link rel='icon' type='image/png' sizes='16x16' href='data:image/png;base64,
+  // iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAMFBMVEU0OkArMjhobHEoPUPFEBIu
+  // O0L+AAC2FBZ2JyuNICOfGx7xAwTjCAlCNTvVDA1aLzQ3COjMAAAAVUlEQVQI12NgwAaCDSA0888G
+  // CItjn0szWGBJTVoGSCjWs8TleQCQYV95evdxkFT8Kpe0PLDi5WfKd4LUsN5zS1sKFolt8bwAZrCa
+  // GqNYJAgFDEpQAAAzmxafI4vZWwAAAABJRU5ErkJggg==' />";
+
+  // set custom html head content , inside <head>
+  // examples of favicon, or meta tags etc
+  // const char* headhtml = "<link rel='icon' type='image/png' href='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAADQElEQVRoQ+2YjW0VQQyE7Q6gAkgFkAogFUAqgFQAVACpAKiAUAFQAaECQgWECggVGH1PPrRvn3dv9/YkFOksoUhhfzwz9ngvKrc89JbnLxuA/63gpsCmwCADWwkNEji8fVNgotDM7osI/x777x5l9F6JyB8R4eeVql4P0y8yNsjM7KGIPBORp558T04A+CwiH1UVUItiUQmZ2XMReSEiAFgjAPBeVS96D+sCYGaUx4cFbLfmhSpnqnrZuqEJgJnd8cQplVLciAgX//Cf0ToIeOB9wpmloLQAwpnVmAXgdf6pwjpJIz+XNoeZQQZlODV9vhc1Tuf6owrAk/8qIhFbJH7eI3eEzsvydQEICqBEkZwiALfF70HyHPpqScPV5HFjeFu476SkRA0AzOfy4hYwstj2ZkDgaphE7m6XqnoS7Q0BOPs/sw0kDROzjdXcCMFCNwzIy0EcRcOvBACfh4k0wgOmBX4xjfmk4DKTS31hgNWIKBCI8gdzogTgjYjQWFMw+o9LzJoZ63GUmjWm2wGDc7EvDDOj/1IVMIyD9SUAL0WEhpriRlXv5je5S+U1i2N88zdPuoVkeB+ls4SyxCoP3kVm9jsjpEsBLoOBNC5U9SwpGdakFkviuFP1keblATkTENTYcxkzgxTKOI3jyDxqLkQT87pMA++H3XvJBYtsNbBN6vuXq5S737WqHkW1VgMQNXJ0RshMqbbT33sJ5kpHWymzcJjNTeJIymJZtSQd9NHQHS1vodoFoTMkfbJzpRnLzB2vi6BZAJxWaCr+62BC+jzAxVJb3dmmiLzLwZhZNPE5e880Suo2AZgB8e8idxherqUPnT3brBDTlPxO3Z66rVwIwySXugdNd+5ejhqp/+NmgIwGX3Py3QBmlEi54KlwmjkOytQ+iJrLJj23S4GkOeecg8G091no737qvRRdzE+HLALQoMTBbJgBsCj5RSWUlUVJiZ4SOljb05eLFWgoJ5oY6yTyJp62D39jDANoKKcSocPJD5dQYzlFAFZJflUArgTPZKZwLXAnHmerfJquUkKZEgyzqOb5TuDt1P3nwxobqwPocZA11m4A1mBx5IxNgRH21ti7KbAGiyNn3HoF/gJ0w05A8xclpwAAAABJRU5ErkJggg==' />";
+  // const char* headhtml = "<meta name='color-scheme' content='dark light'><style></style><script></script>";
+  // wm.setCustomHeadElement(headhtml);
+
+  // set custom html menu content , inside menu item "custom", see setMenu()
+  // const char *menuhtml = "<form action='/custom' method='get'><button>Settings</button></form><br/>\n";
+  // wifiManager.setCustomMenuHTML(menuhtml);
+
+  // invert theme, dark
+  wifiManager.setDarkMode(true);
+
+  // show scan RSSI as percentage, instead of signal stength graphic
+  // wm.setScanDispPerc(true);
+
+  //  Set cutom menu via menu[] or vector
+  //  const char* menu[] = {"wifi","wifinoscan","info","param","close","sep","erase","restart","exit"};
+  //  wm.setMenu(menu,9); // custom menu array must provide length
+
+  std::vector<const char *> menu = {"wifi", "info", "param", "sep", "update", "restart", "exit"};
+  wifiManager.setMenu(menu); // custom menu, pass vector
+
+  // wifiManager.resetSettings();
+  wifiManager.setHostname("ESP32AOG");
+  // wifiManager.setEnableConfigPortal(false);
+  wifiManager.setConfigPortalBlocking(false);
+  wifiManager.autoConnect("ESP32AOG");
+  //  Supress Debug information
+  wifiManager.setDebugOutput(false);
+  // wifiManager.setAPCallback();
+  // wifiManager.startConfigPortal();
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  wifiManager.setBreakAfterConfig(true);
+  // wifiManager.setSaveConfigCallback(connectionEstasblished);
+  wifiManager.startWebPortal();
+
+  for (;;) // Input Loop
+  {
+    if (WiFi.status() == WL_CONNECTED && !socketsStarted)
+    {
+      // wifiManager.stopWebPortal();
+      deviceIP = WiFi.localIP();
+      socketsStarted = true;
+
+      // Connected!
+      Serial.println("WiFi connected");
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      // Serial.println("WiFi connected");
+      // Serial.print("IP address: ");
+      // Serial.println(WiFi.localIP());
+
+      if (udp.listen(AOGAutoSteerPort))
       {
-        AsyncUDPMessage m = AsyncUDPMessage(queueItem->length);
-        int16_t CK_A = 0;
-        for (uint8_t i = 2; i < queueItem->length - 1; i++)
-        {
-          CK_A = (CK_A + queueItem->data[i]);
-        }
-        queueItem->data[queueItem->length - 1] = CK_A;
-
-        m.write(queueItem->data, queueItem->length);
-        udp.sendTo(m, ipDes, DestinationPort);
-        delete queueItem;
+        Serial.print("UDP Listening on IP: ");
+        Serial.println(WiFi.localIP());
+        // Serial.print("UDP Listening on IP: ");
+        // Serial.println(WiFi.localIP());
+        udp.onPacket([=](AsyncUDPPacket packet)
+                     { l_pThis->autoSteerPacketParser(packet); });
+      }
+      if (ntrip.listen(AOGNtripPort))
+      {
+        Serial.print("NTRIP passthrough Listening on IP: ");
+        Serial.println(WiFi.localIP());
+        // Serial.print("UDP Listening on IP: ");
+        // Serial.println(WiFi.localIP());
+        ntrip.onPacket([=](AsyncUDPPacket packet)
+                       { l_pThis->ntripPacketProxy(packet); });
       }
     }
+    wifiManager.process();
+    xTaskDelayUntil(&xLastWakeTime, WIFIMANAGER_INTERVAL / portTICK_PERIOD_MS);
   }
+  // wifiManager.stopConfigPortal();
 }
 
-void UDPPacketManager::printLnByteArray(uint8_t *data, uint8_t datalen)
+std::string UDPPacketManager::inputSelect(std::string name, std::string *strings, int stringArraySize, int selected)
 {
-  for (int i = 0; i < datalen; i++)
+  std::string returnStr = "<!-- INPUT SELECT --><br/><label for='input_select'>";
+  returnStr.append(name.c_str());
+  returnStr.append("</label><select name=\"input_select\" id=\"input_select\" class=\"button\">");
+
+  // String returnString = "<!-- INPUT SELECT --><br/><label for='input_select'>" + name + "IMU connection</label><select name=\"input_select\" id=\"input_select\" class=\"button\">";
+
+  for (int index = 0; index < stringArraySize; index++)
   {
-    Serial.print(data[i]);
-    Serial.print(" ");
-    // Serial.print(data[i]);
-    // Serial.print(" ");
-  }
-  // Serial.println();
-  Serial.println();
-}
-
-void UDPPacketManager::parseSteerData(uint8_t *packet)
-{
-  receivedData.gpsSpeed = ((float)(packet[5] | packet[6] << 8)) * 0.1;
-  gpsSpeedUpdateTimer = 0;
-
-  // prev = guidanceStatus;
-  receivedData.guidanceStatusByte = packet[7];
-  state.guidanceStatus = bitRead(receivedData.guidanceStatusByte, 0);
-  // guidanceStatus = packet[7];
-  // guidanceStatusChanged = (guidanceStatus != prevGuidanceStatus);
-
-  // Bit 8,9    set point steer angle * 100 is sent
-  receivedData.steerTargetAngle = ((float)(packet[8] | ((int8_t)packet[9]) << 8)) * 0.01; // combine high and low bytes
-
-  // Bit 10 Tram
-  tram = packet[10];
-
-  // Bit 11
-  relay = packet[11];
-
-  // Bit 12
-  relayHi = packet[12];
-
-  //----------------------------------------------------------------------------
-  // Serial Send to agopenGPS
-
-  int16_t sa = (int16_t)(dataToSend.currentSteerAngle * 100);
-
-  PGN_253[5] = (uint8_t)sa;
-  PGN_253[6] = sa >> 8;
-
-  // heading
-  PGN_253[7] = (uint8_t)9999;
-  PGN_253[8] = 9999 >> 8;
-
-  // roll
-  PGN_253[9] = (uint8_t)8888;
-  PGN_253[10] = 8888 >> 8;
-
-  PGN_253[11] = hardwareSwitches.switchByte;
-  PGN_253[12] = (uint8_t)dataToSend.pwmDisplay;
-
-  QueueItem item = {PGN_253, sizeof(PGN_253)};
-  xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
-
-  // Steer Data 2 -------------------------------------------------
-  if (steerConfig.PressureSensor || steerConfig.CurrentSensor)
-  {
-    if (aog2Count++ > 2)
+    returnStr.append("<option value=\"");
+    returnStr.append(std::to_string(index).c_str());
+    returnStr.append("\"");
+    if (selected == index)
     {
-      // Send fromAutosteer2
-      PGN_250[5] = (steerConfig.PressureSensor) ? (byte)(sensors.loadSensor.getValue() * 0.25) : (byte)(abs(775 - sensors.loadSensor.getValue()) * 0.5);
-
-      QueueItem item = {PGN_250, sizeof(PGN_250)};
-      xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
-      aog2Count = 0;
+      returnStr.append(" selected");
     }
+    returnStr.append(">");
+    returnStr.append(strings[index]);
+    returnStr.append("</option>");
   }
-}
-
-void UDPPacketManager::parseSteerSettings(uint8_t *packet)
-{
-  // PID values
-  steerSettings.Kp = ((float)packet[5]);   // read Kp from AgOpenGPS
-  steerSettings.highPWM = packet[6];       // read high pwm
-  steerSettings.lowPWM = (float)packet[7]; // read lowPWM from AgOpenGPS
-  steerSettings.minPWM = packet[8];        // read the minimum amount of PWM for instant on
-  float temp = (float)steerSettings.minPWM * 1.2;
-  steerSettings.lowPWM = (byte)temp;
-  steerSettings.steerSensorCounts = packet[9];  // sent as setting displayed in AOG
-  steerSettings.wasOffset = (packet[10]);       // read was zero offset Lo
-  steerSettings.wasOffset |= (packet[11] << 8); // read was zero offset Hi
-  steerSettings.AckermanFix = (float)packet[12] * 0.01;
-
-  // crc
-  // autoSteerUdpData[13];
-
-  // store in EEPROM
-  EEPROM.put(10, steerSettings);
-  EEPROM.commit();
-  // Re-Init steer settings
-  steerSettingsInit();
-}
-void UDPPacketManager::parseSteerConfig(uint8_t *packet)
-{
-  uint8_t sett = packet[5]; // setting0
-  steerConfig.InvertWAS = bitRead(sett, 0) ? 1 : 0;
-  steerConfig.IsRelayActiveHigh = bitRead(sett, 1) ? 1 : 0;
-  steerConfig.MotorDriveDirection = bitRead(sett, 2) ? 1 : 0;
-  steerConfig.SingleInputWAS = bitRead(sett, 3) ? 1 : 0;
-  steerConfig.CytronDriver = bitRead(sett, 4) ? 1 : 0;
-  steerConfig.SteerSwitch = bitRead(sett, 5) ? 1 : 0;
-  steerConfig.SteerButton = bitRead(sett, 6) ? 1 : 0;
-  steerConfig.ShaftEncoder = bitRead(sett, 7) ? 1 : 0;
-  steerConfig.PulseCountMax = packet[6];
-  // was speed
-  // autoSteerUdpData[7];
-  sett = packet[8]; // setting1 - Danfoss valve etc
-  steerConfig.IsDanfoss = bitRead(sett, 0) ? 1 : 0;
-  steerConfig.PressureSensor = bitRead(sett, 0) ? 1 : 0;
-  steerConfig.CurrentSensor = bitRead(sett, 0) ? 1 : 0;
-  steerConfig.IsUseY_Axis = bitRead(sett, 0) ? 1 : 0;
-
-  // crc
-  // autoSteerUdpData[13];
-
-  EEPROM.put(40, steerConfig);
-  // Re-Init
+  returnStr.append("</select>");
+  Serial.println(returnStr.c_str());
+  return returnStr;
 }

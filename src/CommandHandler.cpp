@@ -37,13 +37,13 @@ void commandHandler(uint8_t *data, size_t len)
     else if (cmd.startsWith("imu"))
     {
       Serial.print("IMU: heading[");
-      Serial.print(dataToSend.imuHeading);
+      Serial.print(dataToSend.heading);
       Serial.print("] roll[");
-      Serial.print(dataToSend.imuRoll);
+      Serial.print((dataToSend.roll));
       Serial.print("] Pitch[");
-      Serial.print(dataToSend.imuPitch);
+      Serial.print(dataToSend.pitch);
       Serial.print("] YawRate[");
-      Serial.print(dataToSend.imuYawRate);
+      Serial.print(dataToSend.yawRate);
       Serial.println("]");
     }
     else

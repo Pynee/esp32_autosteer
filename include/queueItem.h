@@ -1,7 +1,10 @@
+#ifndef QUEUEITEM_H
+#define QUEUEITEM_H
 #include <cstdint>
 
 struct QueueItem
 {
-    char *data;
-    uint8_t length;
+    uint8_t *data;
+    unsigned int length;
 };
+#endif

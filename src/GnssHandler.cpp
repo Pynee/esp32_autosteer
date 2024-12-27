@@ -1,21 +1,26 @@
 #include "GnssHandler.h"
 
 /* A parser is declared with 3 handlers at most */
+// NMEAParser<2> parser;
+// PandaBuilder *pandaBuilderptr;
+// NMEAMessage nmeaMessage;
+/* A parser is declared with 3 handlers at most */
 NMEAParser<2> parser;
 PandaBuilder *pandaBuilderptr;
 NMEAMessage nmeaMessage;
-UART gnssUart(GNSS_PORT, gnssReceiveData);
+GNSSUART gnssUart(GNSS_PORT, gnssReceiveData);
 bool GGA_Available = false;
 
 void initGnssHandler(PandaBuilder *pandaBuilder)
 {
+  gnssUart.init(GNSS_TX_PIN, GNSS_RX_PIN);
   pandaBuilderptr = pandaBuilder;
   // the dash means wildcard
   parser.setErrorHandler(errorHandler);
   parser.addHandler("G-GGA", GGA_Handler);
   parser.addHandler("G-VTG", VTG_Handler);
 
-  // xTaskCreate(gnssStreamWorker, "gnssStreamWorker", 3096, NULL, 3, NULL);
+  // xTaskCreate(gnssStreamWorker, "gnssStreamWorker", 3096, this, 3, NULL);
 }
 /* void startWorkerImpl(void *_this)
 {
@@ -34,6 +39,8 @@ void initGnssHandler(PandaBuilder *pandaBuilder)
 } */
 void gnssReceiveData(uint8_t *data, size_t len)
 {
+  // Serial.write(data, len);
+  // Serial.println();
   for (uint8_t i = 0; i < len; i++)
   {
     parser << data[i];
@@ -42,7 +49,7 @@ void gnssReceiveData(uint8_t *data, size_t len)
 
 void gnssSendData(uint8_t *data, size_t len)
 {
-  gnssUart.print(*data);
+  gnssUart.print(*data, len);
 }
 
 // If odd characters showed up.

@@ -30,19 +30,19 @@ bool Button::read()
             isChanged = true;
             risingEdge = true;
         }
-        Serial.println("true");
-        // stateBytes = stateBytes | 192;
+        // Serial.println("true");
+        //  stateBytes = stateBytes | 192;
     }
     else if ((debounce & 15) == 8)
     {
         if (buttonState)
         {
-            Serial.println("falsee");
+            // Serial.println("falsee");
             buttonState = false;
             isChanged = true;
             risingEdge = false;
         }
-        Serial.println("false");
+        // Serial.println("false");
     }
     return buttonState;
 }

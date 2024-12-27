@@ -1,21 +1,25 @@
 #include "PandaBuilder.h"
 
-PandaBuilder::PandaBuilder(UDPPacketManager *packetmanager, IMUHandler *imuHandler)
+PandaBuilder::PandaBuilder(PGNCommManager *PGNManager)
 {
-    this->packetManager = packetManager;
-    this->imuHandler = imuHandler;
+    this->pgnmanager = PGNManager;
 }
 
 void PandaBuilder::buildPanda(NMEAMessage *nmeaMessage)
 {
-    if (imuHandler->useBNO08x)
+    // Don't send nmea if connection isn't ready
+    if (!destinationIPSet)
+    {
+        return;
+    }
+    /*if (dataToSend.imuAvailable)
     {
         imuHandler->calculateEuler();
     }
     else
     {
         itoa(65535, imuHandler->imuHeading, 10);
-    } // Get IMU data ready
+    } // Get IMU data ready*/
     strcpy(nmea, "");
 
     strcat(nmea, "$PANDA,");
@@ -57,63 +61,47 @@ void PandaBuilder::buildPanda(NMEAMessage *nmeaMessage)
     strcat(nmea, ",");
 
     // 12
-    strcat(nmea, imuHandler->imuHeading);
+    strcat(nmea, std::to_string(dataToSend.heading).c_str());
     strcat(nmea, ",");
 
     // 13
-    strcat(nmea, imuHandler->imuRoll);
+    strcat(nmea, std::to_string(dataToSend.roll).c_str());
     strcat(nmea, ",");
 
     // 14
-    strcat(nmea, imuHandler->imuPitch);
+    strcat(nmea, std::to_string(dataToSend.pitch).c_str());
     strcat(nmea, ",");
 
     // 15
-    strcat(nmea, imuHandler->imuYawRate);
+    strcat(nmea, std::to_string(dataToSend.yawRate).c_str());
 
     strcat(nmea, "*");
 
-    CalculateChecksum();
+    calculateChecksum(nmea);
 
     strcat(nmea, "\r\n");
 
     int len = strlen(nmea);
-    {
-        /* Send a pointer to a struct AMessage object.  Don't block if the
-        queue is already full. */
-        QueueItem item = {(uint8_t *)nmea, strlen(nmea)};
-        xQueueSend(packetManager->sendQueue, (void *)&item, (TickType_t)0);
-    }
-    //(*sendDatafn)((uint8_t *)nmea, len);
+
+    QueueItem item = {(uint8_t *)nmea, strlen(nmea)};
+    xQueueSend(pgnmanager->managerSendQueue, (void *)&item, (TickType_t)0);
 }
-
-void PandaBuilder::CalculateChecksum(void)
+// Calculate nmea checksum and append it to the sentence
+uint8_t PandaBuilder::calculateChecksum(char *packet)
 {
-    int16_t sum = 0;
-    int16_t inx = 0;
-    char tmp;
 
-    // The checksum calc starts after '$' and ends before '*'
-    for (inx = 1; inx < 100; inx++)
+    char *packetptr = packet;
+    const char *asciiHex = "0123456789ABCDEF";
+    int8_t checksum = 0;
+    // Iterate over nmea string XORing to checksum until we reach '*' character
+    while (*++packetptr != '*')
     {
-        tmp = nmea[inx];
-
-        // * Indicates end of data and start of checksum
-        if (tmp == '*')
-        {
-            break;
-        }
-
-        sum ^= tmp; // Build checksum
+        checksum ^= *packetptr;
     }
 
-    byte chk = (sum >> 4);
-    char hex[2] = {asciiHex[chk], 0};
-    strcat(nmea, hex);
-
-    chk = (sum % 16);
-    char hex2[2] = {asciiHex[chk], 0};
-    strcat(nmea, hex2);
+    char checksumHexString[3] = {asciiHex[checksum >> 4], asciiHex[checksum & 15], '\0'};
+    strcat(packet, checksumHexString);
+    return checksum;
 }
 
 /*

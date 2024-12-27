@@ -1,16 +1,12 @@
 #ifndef GNSSHANDLER_H
 #define GNSSHANDLER_H
 
-#include "zNMEAParser.h"
+#include "NMEAParser.h"
 #include "configuration.h"
-#include "UARTHandler.h"
+#include "GNSSUART.h"
 #include "PandaBuilder.h"
 
-/* A parser is declared with 3 handlers at most */
-extern NMEAParser<2> parser;
-extern PandaBuilder *pandaBuilderptr;
-extern NMEAMessage nmeaMessage;
-extern UART gnssUart;
+// UART gnssUart;
 extern bool GGA_Available; // Do we have GGA on correct port?
 void startWorkerImpl(void *);
 void errorHandler();
