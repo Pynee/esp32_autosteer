@@ -48,10 +48,9 @@ private:
 public:
     UDPPacketManager(void gnssSendData(uint8_t *data, size_t len));
     bool init(PGNCommManager *commManager);
-    // std::string dataString;
     uint8_t data[128] = {49};
+    // Queue to send data over UDP
     QueueHandle_t sendQueue = xQueueCreate(20, sizeof(struct QueueItem));
-    // QueueItem queueItem;
 };
 
 #endif
