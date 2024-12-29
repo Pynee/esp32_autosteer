@@ -16,6 +16,10 @@ bool UDPPacketManager::init(PGNCommManager *commManager)
   WiFi.useStaticBuffers(true);
   esp_wifi_set_ps(WIFI_PS_NONE);
 
+  // esp_event_handler_instance_t instance_any_id;
+  esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &UDPPacketManager::eventHandler, this, NULL);
+  esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &UDPPacketManager::eventHandler, this, NULL);
+
   xTaskCreate(this->startWifimanagerWorker, "WifiManagerWorker", 16384, this, 3, NULL);
   xTaskCreate(this->startWorkerImpl, "UdpSendDataTask", 8192, this, 3, NULL);
 
@@ -85,6 +89,49 @@ void UDPPacketManager::sendDataTask(void *z)
   vTaskDelete(NULL);
 }
 
+void UDPPacketManager::eventHandler(void *arguments, esp_event_base_t eventBase,
+                                    int32_t eventID, void *eventData)
+{
+  UDPPacketManager *l_pThis = (UDPPacketManager *)arguments;
+  if (eventBase == WIFI_EVENT && eventID == WIFI_EVENT_STA_START)
+  {
+    // esp_wifi_connect();
+  }
+  else if (eventBase == WIFI_EVENT && eventID == WIFI_EVENT_STA_DISCONNECTED)
+  {
+    // esp_wifi_connect();
+    destinationIPSet = false;
+    // s_retry_num++;
+    // ESP_LOGI(TAG, "retry to connect to the AP");
+    // xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+  }
+  else if (eventBase == IP_EVENT && eventID == IP_EVENT_STA_GOT_IP)
+  {
+    ip_event_got_ip_t *event = (ip_event_got_ip_t *)eventData;
+    // ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+    // s_retry_num = 0;
+    // xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    deviceIP = event->ip_info.ip.addr;
+    Serial.println(deviceIP);
+    // Connected!
+
+    if (l_pThis->udp.listen(AOGAutoSteerPort))
+    {
+      Serial.print("UDP Listening on IP: ");
+      Serial.println(WiFi.localIP());
+      l_pThis->udp.onPacket([=](AsyncUDPPacket packet)
+                            { l_pThis->autoSteerPacketParser(packet); });
+    }
+    if (l_pThis->ntrip.listen(AOGNtripPort))
+    {
+      Serial.print("NTRIP passthrough Listening on IP: ");
+      Serial.println(WiFi.localIP());
+      l_pThis->ntrip.onPacket([=](AsyncUDPPacket packet)
+                              { l_pThis->ntripPacketProxy(packet); });
+    }
+  }
+}
+
 void UDPPacketManager::startWifimanagerWorker(void *_this)
 {
   ((UDPPacketManager *)_this)->wifimanagerWorker(_this);
@@ -92,8 +139,6 @@ void UDPPacketManager::startWifimanagerWorker(void *_this)
 
 void UDPPacketManager::wifimanagerWorker(void *z)
 {
-
-  UDPPacketManager *l_pThis = (UDPPacketManager *)z;
   bool socketsStarted = false;
 
   WiFiManager wifiManager;
@@ -116,31 +161,6 @@ void UDPPacketManager::wifimanagerWorker(void *z)
 
   for (;;) // wifi loop
   {
-    if (WiFi.status() == WL_CONNECTED && !socketsStarted)
-    {
-      deviceIP = WiFi.localIP();
-      socketsStarted = true;
-
-      // Connected!
-      Serial.println("WiFi connected");
-      Serial.print("IP address: ");
-      Serial.println(WiFi.localIP());
-
-      if (udp.listen(AOGAutoSteerPort))
-      {
-        Serial.print("UDP Listening on IP: ");
-        Serial.println(WiFi.localIP());
-        udp.onPacket([=](AsyncUDPPacket packet)
-                     { l_pThis->autoSteerPacketParser(packet); });
-      }
-      if (ntrip.listen(AOGNtripPort))
-      {
-        Serial.print("NTRIP passthrough Listening on IP: ");
-        Serial.println(WiFi.localIP());
-        ntrip.onPacket([=](AsyncUDPPacket packet)
-                       { l_pThis->ntripPacketProxy(packet); });
-      }
-    }
     wifiManager.process();
     xTaskDelayUntil(&xLastWakeTime, WIFIMANAGER_INTERVAL / portTICK_PERIOD_MS);
   }
