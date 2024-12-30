@@ -1,4 +1,4 @@
-This is Originally a fork of MtPoke21's repo https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 that was converted into Platformio project but now almost everything totally rewritten. My goal is to make a better codebase for AgOpenGPS firmware targeting ESP32 boards. 
+This is originally a fork of MrPoke21's repo https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 that was converted into Platformio project but now almost everything is totally rewritten. My goal is to make a better codebase for AgOpenGPS firmware targeting ESP32 boards. 
 
 |Task            |trigger/interval                       |priority|purpose          |
 |----------------|---------------------------------------|--------|-----------------|
