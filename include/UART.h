@@ -18,6 +18,8 @@
 #include "driver/uart.h"
 // #include "esp_log.h"
 #include "Print.h"
+#include "queueItem.h"
+#include "Handler.h"
 
 static const char *TAG = "uart_events";
 
@@ -40,20 +42,20 @@ static const char *TAG = "uart_events";
 #define UART_BUFFER_SIZE (1024)
 #define RD_BUF_SIZE (BUF_SIZE)
 
-class GNSSUART : public Print
+class UART : public Print
 {
 private:
     uint8_t port = 0;
-
+    Handler *handler;
     static void startWorkerImpl(void *);
     void uartEventWorker(void *pvParameters);
     QueueHandle_t uartQueue;
     void (*callback)(uint8_t *data, size_t len);
 
 public:
-    GNSSUART();
-    GNSSUART(uint8_t port);
-    GNSSUART(uint8_t port, void callback(uint8_t *data, size_t len));
+    UART();
+    UART(uint8_t port);
+    UART(uint8_t port, Handler *handler);
     void init();
     void init(int TX_PIN, int RX_PIN);
     void setCallback(void callback(uint8_t *data, size_t len));

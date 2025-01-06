@@ -1,25 +1,25 @@
-#include "GNSSUART.h"
+#include "UART.h"
 
-GNSSUART::GNSSUART()
+UART::UART()
 {
 }
 
-GNSSUART::GNSSUART(uint8_t _port)
-{
-    this->port = _port;
-}
-GNSSUART::GNSSUART(uint8_t _port, void _callback(uint8_t *data, size_t len))
+UART::UART(uint8_t _port)
 {
     this->port = _port;
-    this->callback = _callback;
+}
+UART::UART(uint8_t port, Handler *handler)
+{
+    this->port = port;
+    this->handler = handler;
 }
 
-void GNSSUART::init()
+void UART::init()
 {
     init(UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 }
 
-void GNSSUART::init(int TX_PIN, int RX_PIN)
+void UART::init(int TX_PIN, int RX_PIN)
 {
     // esp_log_level_set(TAG, ESP_LOG_INFO);
 
@@ -47,20 +47,20 @@ void GNSSUART::init(int TX_PIN, int RX_PIN)
     uart_flush(port);
 
     // Create a task to handler UART event from ISR
-    xTaskCreate(startWorkerImpl, "uart_event_task", 4096, this, 12, NULL);
+    xTaskCreatePinnedToCore(startWorkerImpl, "uart_event_task", 4096, this, 12, NULL, 1);
 }
 
-void GNSSUART::setCallback(void callback(uint8_t *data, size_t len))
+void UART::setCallback(void callback(uint8_t *data, size_t len))
 {
     this->callback = callback;
 };
 
-void GNSSUART::startWorkerImpl(void *_this)
+void UART::startWorkerImpl(void *_this)
 {
-    ((GNSSUART *)_this)->uartEventWorker(_this);
+    ((UART *)_this)->uartEventWorker(_this);
 }
 
-void GNSSUART::uartEventWorker(void *pvParameters)
+void UART::uartEventWorker(void *pvParameters)
 {
     uart_event_t event;
     size_t buffered_size;
@@ -132,9 +132,9 @@ void GNSSUART::uartEventWorker(void *pvParameters)
                     /* make sure the line is a standard string */
                     dataBuffer[dataLength] = '\0';
                     /* Send new line to handle */
-                    // Serial.write(dataBuffer, dataLength);
-                    // Serial.println();
-                    callback(dataBuffer, dataLength);
+                    QueueItem item = {(uint8_t *)dataBuffer, (unsigned int)dataLength};
+                    xQueueSend(handler->receiveQueue, (void *)&item, (TickType_t)0);
+                    // callback(dataBuffer, dataLength);
                 }
                 else
                 {
@@ -157,7 +157,7 @@ void GNSSUART::uartEventWorker(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-size_t GNSSUART::write(uint8_t c)
+size_t UART::write(uint8_t c)
 {
     uart_write_bytes(port, (const char *)c, sizeof(c));
     return 1;
