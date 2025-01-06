@@ -7,7 +7,7 @@
 
 // #include <WiFiManager.h>
 
-#include "AutoSteer.h"
+#include "Autosteerhandler.h"
 #include "GnssHandler.h"
 #include "IMUHandler.h"
 #include "InputHandler.h"
@@ -15,10 +15,12 @@
 #include "PandaBuilder.h"
 #include "PGNCommManager.h"
 
-UDPPacketManager packetManager(&gnssSendData);
+GNSSHandler gnssHandler;
+UDPPacketManager packetManager(&gnssHandler);
 IMUHandler imuHandler;
 PGNCommManager pgnCommManager(&packetManager);
 PandaBuilder pandaBuilder(&pgnCommManager);
+AutosteerHandler autosteerHandler;
 
 // GnssHandler gnssHandler;
 
@@ -45,9 +47,9 @@ void setup()
   packetManager.init(&pgnCommManager);
   pgnCommManager.init();
   imuHandler.init();
-  initGnssHandler(&pandaBuilder);
+  gnssHandler.init(&pandaBuilder);
   initInput();
-  initAutosteer();
+  autosteerHandler.init();
 }
 
 void loop()
