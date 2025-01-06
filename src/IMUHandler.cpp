@@ -8,7 +8,7 @@ IMUHandler::IMUHandler()
 
 void IMUHandler::init()
 {
-    xTaskCreate(this->startWorkerImpl, "imuWorker", 8192, this, 3, NULL);
+    xTaskCreatePinnedToCore(this->startWorkerImpl, "imuWorker", 8192, this, 3, NULL, 1);
 }
 
 void IMUHandler::startWorkerImpl(void *_this)

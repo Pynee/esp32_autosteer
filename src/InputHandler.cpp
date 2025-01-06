@@ -27,5 +27,5 @@ void initInput()
   hardwareSwitches.steerSwitch.init();
   hardwareSwitches.workSwitch.init();
 
-  xTaskCreate(inputWorker, "inputWorker", 4096, NULL, 3, NULL);
+  xTaskCreatePinnedToCore(inputWorker, "inputWorker", 4096, NULL, 3, NULL, 1);
 }

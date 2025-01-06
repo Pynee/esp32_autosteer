@@ -1,5 +1,8 @@
 #include "GnssHandler.h"
 
+GNSSHandler::GNSSHandler() : gnssUart(GNSS_PORT, this)
+{
+}
 /* A parser is declared with 3 handlers at most */
 // NMEAParser<2> parser;
 // PandaBuilder *pandaBuilderptr;
@@ -8,59 +11,69 @@
 NMEAParser<2> parser;
 PandaBuilder *pandaBuilderptr;
 NMEAMessage nmeaMessage;
-GNSSUART gnssUart(GNSS_PORT, gnssReceiveData);
+
 bool GGA_Available = false;
 
-void initGnssHandler(PandaBuilder *pandaBuilder)
+void GNSSHandler::init(PandaBuilder *pandaBuilder)
 {
   gnssUart.init(GNSS_TX_PIN, GNSS_RX_PIN);
   pandaBuilderptr = pandaBuilder;
-  // the dash means wildcard
-  parser.setErrorHandler(errorHandler);
-  parser.addHandler("G-GGA", GGA_Handler);
-  parser.addHandler("G-VTG", VTG_Handler);
 
-  // xTaskCreate(gnssStreamWorker, "gnssStreamWorker", 3096, this, 3, NULL);
+  parser.setErrorHandler(GNSSHandler::errorHandler);
+
+  parser.addHandler("G-GGA", [this]()
+                    { GGA_Handler(); });
+  parser.addHandler("G-VTG", [this]()
+                    { VTG_Handler(); });
+  xTaskCreate(startReceiveImpl, "gnssreceiveTask", 3096, this, 3, NULL);
+  xTaskCreate(startReceiveImpl, "gnssSendTask", 3096, this, 3, NULL);
 }
-/* void startWorkerImpl(void *_this)
+//[this]{VTG_Handler();};
+// std::bind(GNSSHandler::GGA_Handler,this)
+void GNSSHandler::receiveTask(void *z)
 {
-  ((GnssHandler *)_this)->gnssStreamWorker(_this);
-} */
-
-/* void gnssStreamWorker(void *z)
-{
+  if (receiveQueue == NULL)
+  {
+    Serial.print("queue creation failed!!");
+  }
   for (;;)
   {
-    while (Serial2.available())
+    QueueItem queueItem;
+    if (xQueueReceive(receiveQueue, &queueItem, portMAX_DELAY) == pdTRUE)
     {
-      parser << Serial2.read();
+      for (uint8_t i = 0; i < queueItem.length; i++)
+      {
+        parser << queueItem.data[i];
+      }
     }
   }
-} */
-void gnssReceiveData(uint8_t *data, size_t len)
-{
-  // Serial.write(data, len);
-  // Serial.println();
-  for (uint8_t i = 0; i < len; i++)
-  {
-    parser << data[i];
-  }
 }
-
-void gnssSendData(uint8_t *data, size_t len)
+void GNSSHandler::sendTask(void *z)
 {
-  gnssUart.print(*data, len);
+  if (sendQueue == NULL)
+  {
+    Serial.print("queue creation failed!!");
+  }
+  for (;;)
+  {
+    QueueItem queueItem;
+    if (xQueueReceive(sendQueue, &queueItem, portMAX_DELAY) == pdTRUE)
+    {
+      gnssUart.print(*queueItem.data, (size_t)queueItem.length);
+    }
+  }
 }
 
 // If odd characters showed up.
-void errorHandler()
+void GNSSHandler::errorHandler()
 {
   // nothing at the moment
 }
 
-void GGA_Handler() // Rec'd GGA
+void GNSSHandler::GGA_Handler() // Rec'd GGA
 {
-  // fix time
+
+  //  fix time
   parser.getArg(0, nmeaMessage.fixTime);
 
   // latitude
@@ -86,11 +99,11 @@ void GGA_Handler() // Rec'd GGA
   // time of last DGPS update
   parser.getArg(12, nmeaMessage.ageDGPS);
 
-  GGA_Available = true;
+  // GGA_Available = true;
   pandaBuilderptr->buildPanda(&nmeaMessage);
 }
 
-void VTG_Handler()
+void GNSSHandler::VTG_Handler()
 {
   // vtg heading
   parser.getArg(0, nmeaMessage.vtgHeading);

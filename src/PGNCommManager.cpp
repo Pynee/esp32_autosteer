@@ -7,8 +7,8 @@ PGNCommManager::PGNCommManager(UDPPacketManager *udpPacketManager) : pgnParser(t
 bool PGNCommManager::init()
 {
 
-    xTaskCreate(this->startsendDataImpl, "PGNCMSendTask", 4096, this, 3, NULL);
-    xTaskCreate(this->startreceiveDataImpl, "PGNCMRevTask", 4096, this, 3, NULL);
+    xTaskCreatePinnedToCore(this->startsendDataImpl, "PGNCMSendTask", 4096, this, 3, NULL, 1);
+    xTaskCreatePinnedToCore(this->startreceiveDataImpl, "PGNCMRevTask", 4096, this, 3, NULL, 1);
     return true;
 }
 void PGNCommManager::startsendDataImpl(void *_this)

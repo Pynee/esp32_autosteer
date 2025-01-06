@@ -15,7 +15,9 @@
 #include "PGNParser.h"
 #include "GlobalVariables.h"
 #include "queueItem.h"
+
 class PGNCommManager;
+class GNSSHandler;
 
 class UDPPacketManager
 {
@@ -42,14 +44,15 @@ private:
     void sendDataTask(void *z);
     static void startWifimanagerWorker(void *);
     void wifimanagerWorker(void *z);
-    void (*gnssSendData)(uint8_t *data, size_t len);
+    GNSSHandler *gnssHandler;
     std::string inputSelect(std::string name, std::string *strings, int stringArraySize, int selected);
 
 public:
-    UDPPacketManager(void gnssSendData(uint8_t *data, size_t len));
+    UDPPacketManager(GNSSHandler *gnssHandler);
     static void eventHandler(void *arguments, esp_event_base_t eventBase,
                              int32_t eventID, void *eventData);
     bool init(PGNCommManager *commManager);
+    uint8_t ntripBuffer[128];
     uint8_t data[128] = {49};
     // Queue to send data over UDP
     QueueHandle_t sendQueue = xQueueCreate(20, sizeof(struct QueueItem));

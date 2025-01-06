@@ -53,20 +53,21 @@ void PGNParser::packetParserTask(void *z)
 
 void PGNParser::parsePacket(uint8_t *packet, int size)
 {
+    size = min(size, ((int)packet[4]) + 6);
+
     // Serial.println("Parsing...");
     if (packet[0] != 128 || packet[1] != 129)
     {
         return;
     }
 
-    if (packet[size - 1] != 71 && packet[size - 1] != calculateChecksum((uint8_t *)packet, 2, size))
+    if (packet[size - 1] != calculateChecksum((uint8_t *)packet, 2, size))
     {
-        Serial.print("Packet: ''CRC'' error: correct = ");
+        Serial.print("Packet ''CRC'' error: correct = ");
         Serial.print(packet[size - 1]);
         Serial.print(", calculated = ");
         Serial.println(calculateChecksum((uint8_t *)packet, 2, size));
         printLnByteArray((uint8_t *)packet, size);
-        return;
     }
 
     if (packet[0] == 0x80 && packet[1] == 0x81 && packet[2] == 0x7F) // Data
@@ -113,6 +114,10 @@ void PGNParser::parsePacket(uint8_t *packet, int size)
             // xQueueSend(sendQueue, (void *)&item, (TickType_t)0);
             break;
         }
+        case 201: // Subnet changed not doing anything with this yet
+
+            break;
+
         case 202: // Scan Request
         {
             // Serial.println("Scan Request");
@@ -132,6 +137,8 @@ void PGNParser::parsePacket(uint8_t *packet, int size)
                 break;
             }
         }
+        case 100: // Corrected location fix2fix lat lon but we ignore this atleast for now
+            break;
 
         default:
             Serial.println("Unknown packet!!!");
@@ -141,7 +148,7 @@ void PGNParser::parsePacket(uint8_t *packet, int size)
     }
     else
     {
-        Serial.println("Unknown packet!!!");
+        Serial.println("Unknown packet!");
         // Serial.print("Unknown packet!!!");
         printLnByteArray(packet, size);
     }
@@ -204,17 +211,6 @@ void PGNParser::parseSteerData(uint8_t *packet)
 
     QueueItem item = {(uint8_t *)PGN_253, sizeof(PGN_253)};
 
-    // Serial.println(convertedSteerAngle);
-    // Serial.print("Response from autosteer Roll:");
-    // Serial.print(dataToSend.roll);
-    // Serial.print(" heading: ");
-    // Serial.print(dataToSend.heading);
-    // Serial.print(" steerAngle: ");
-    // Serial.println(convertedSteerAngle);
-    // Serial.print((int)hardwareSwitches.switchByte);
-    // printLnByteArray(PGN_253, sizeof(PGN_253));
-    // Serial.write(PGN_253, 14);
-    // Serial.println();
     xQueueSend(pgnCommManager->managerSendQueue, &item, (TickType_t)0);
 
     // Steer Data 2 -------------------------------------------------

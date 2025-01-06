@@ -34,6 +34,7 @@
 #define __NMEAParser_h__
 
 #include <Arduino.h>
+#include "GnssHandler.h"
 
 namespace NMEA
 {
@@ -60,10 +61,12 @@ class NMEAParser
 
 private:
   typedef void (*NMEAErrorHandler)(void);
+  // std::function<void> NMEAHandler;
   typedef void (*NMEAHandler)(void);
   typedef struct
   {
     char mToken[6];
+    std::function<void()> callback;
     NMEAHandler mHandler;
   } NMEAHandlerEntry;
   typedef enum
@@ -297,7 +300,8 @@ private:
     }
     if (slot != -1)
     {
-      mHandlers[slot].mHandler();
+      // mHandlers[slot].mHandler();
+      mHandlers[slot].callback();
     }
     else
     {
@@ -361,7 +365,7 @@ public:
   /*
      Add a sentence handler
   */
-  void addHandler(const char *inToken, NMEAHandler inHandler)
+  void addHandler(const char *inToken, std::function<void()> callback)
   {
     if (mHandlerCount < S)
     {
@@ -369,7 +373,7 @@ public:
       {
         strncpy(mHandlers[mHandlerCount].mToken, inToken, 5);
         mHandlers[mHandlerCount].mToken[5] = '\0';
-        mHandlers[mHandlerCount].mHandler = inHandler;
+        mHandlers[mHandlerCount].callback = callback;
         mHandlerCount++;
       }
     }

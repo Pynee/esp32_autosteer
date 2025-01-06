@@ -2,10 +2,11 @@
 // Forward declaration
 #include "PGNCommManager.h"
 #include "SetupPage.h"
+#include "GnssHandler.h"
 
-UDPPacketManager::UDPPacketManager(void gnssSendData(uint8_t *data, size_t len))
+UDPPacketManager::UDPPacketManager(GNSSHandler *gnssHandler)
 {
-  this->gnssSendData = gnssSendData;
+  this->gnssHandler = gnssHandler;
 }
 
 bool UDPPacketManager::init(PGNCommManager *commManager)
@@ -20,8 +21,8 @@ bool UDPPacketManager::init(PGNCommManager *commManager)
   esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &UDPPacketManager::eventHandler, this, NULL);
   esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &UDPPacketManager::eventHandler, this, NULL);
 
-  xTaskCreate(this->startWifimanagerWorker, "WifiManagerWorker", 16384, this, 3, NULL);
-  xTaskCreate(this->startWorkerImpl, "UdpSendDataTask", 8192, this, 3, NULL);
+  xTaskCreatePinnedToCore(this->startWifimanagerWorker, "WifiManagerWorker", 8192, this, 3, NULL, 1);
+  xTaskCreatePinnedToCore(this->startWorkerImpl, "UdpSendDataTask", 8192, this, 3, NULL, 1);
 
   return true;
 }
@@ -31,12 +32,15 @@ void UDPPacketManager::startWorkerImpl(void *_this)
   ((UDPPacketManager *)_this)->sendDataTask(_this);
 }
 
-// Proxies NTRIP messages to GNSS board serial
+// Proxies NTRIP messages to GNSS board serial port
 void UDPPacketManager::ntripPacketProxy(AsyncUDPPacket packet)
 {
   if (packet.length() > 0)
   {
-    gnssSendData(packet.data(), packet.length());
+    packet.read(this->ntripBuffer, packet.length());
+    // gnssSendData(this->ntripBuffer, packet.length());
+    QueueItem item = {this->ntripBuffer, packet.length()};
+    xQueueSend(gnssHandler->receiveQueue, &item, (TickType_t)0);
   }
 }
 
@@ -51,11 +55,12 @@ void UDPPacketManager::autoSteerPacketParser(AsyncUDPPacket udpPacket)
   }
   else
   {
-    udpPacket.read(this->data, udpPacket.length());
+    udpPacket.read(this->data, min((size_t)128, udpPacket.length()));
 
     // Lock receiving messages only from AOG and stop multicasting response messages
     if (!destinationIPSet && this->data[0] == 0x80 && this->data[1] == 0x81 && this->data[2] == 0x7F && this->data[4] == 3 && this->data[5] == 202 && this->data[6] == 202)
     {
+      Serial.println("Destinationset!");
       destinationIP = udpPacket.remoteIP();
       destinationIPSet = true;
     }
@@ -77,7 +82,6 @@ void UDPPacketManager::sendDataTask(void *z)
   {
 
     QueueItem queueItem;
-    std::string *receivedString = nullptr;
 
     if (xQueueReceive(sendQueue, &queueItem, portMAX_DELAY) == pdTRUE)
     {
@@ -114,20 +118,19 @@ void UDPPacketManager::eventHandler(void *arguments, esp_event_base_t eventBase,
     deviceIP = event->ip_info.ip.addr;
     Serial.println(deviceIP);
     // Connected!
-
-    if (l_pThis->udp.listen(AOGAutoSteerPort))
-    {
-      Serial.print("UDP Listening on IP: ");
-      Serial.println(WiFi.localIP());
-      l_pThis->udp.onPacket([=](AsyncUDPPacket packet)
-                            { l_pThis->autoSteerPacketParser(packet); });
-    }
     if (l_pThis->ntrip.listen(AOGNtripPort))
     {
       Serial.print("NTRIP passthrough Listening on IP: ");
       Serial.println(WiFi.localIP());
       l_pThis->ntrip.onPacket([=](AsyncUDPPacket packet)
                               { l_pThis->ntripPacketProxy(packet); });
+    }
+    if (l_pThis->udp.listen(AOGAutoSteerPort))
+    {
+      Serial.print("UDP Listening on IP: ");
+      Serial.println(WiFi.localIP());
+      l_pThis->udp.onPacket([=](AsyncUDPPacket packet)
+                            { l_pThis->autoSteerPacketParser(packet); });
     }
   }
 }
@@ -148,7 +151,7 @@ void UDPPacketManager::wifimanagerWorker(void *z)
   wifiManager.setDarkMode(true);
   std::vector<const char *> menu = {"wifi", "info", "param", "sep", "update", "restart", "exit"};
   wifiManager.setMenu(menu); // custom menu, pass vector
-  wifiManager.setHostname("ESP32AOG");
+  wifiManager.setHostname("esp32aog");
   wifiManager.setConfigPortalBlocking(false);
   wifiManager.autoConnect("ESP32AOG");
   wifiManager.setDebugOutput(false);
