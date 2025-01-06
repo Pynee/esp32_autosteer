@@ -1,5 +1,4 @@
-This Orginaly a fork of this repo that was converted into Platformio project
-https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 but now is pretty much totally rewritten. I'm trying to make a more cleanly written codebase for AgOpenGPS firmware targeting ESP32 boards. 
+This is originally a fork of MrPoke21's repo https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 that was converted into Platformio project but now almost everything is totally rewritten. My goal is to make a better codebase for AgOpenGPS firmware targeting ESP32 boards. 
 
 |Task            |trigger/interval                       |priority|purpose          |
 |----------------|---------------------------------------|--------|-----------------|
@@ -18,7 +17,7 @@ https://github.com/MrPoke21/AgOpenGPS_Boards/tree/master/ESP32 but now is pretty
 Input
 
 
-using these submodules in lib folder:
+using these submodules tha you can find in the lib folder:
 https://github.com/tzapu/WiFiManager
 
 https://github.com/pfeerick/elapsedMillis
