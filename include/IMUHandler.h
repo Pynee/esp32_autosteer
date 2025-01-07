@@ -48,6 +48,7 @@ public:
     IMUHandler();
     void init();
     void calculateEuler();
+    QueueHandle_t gpioEventQueue = xQueueCreate(10, sizeof(uint8_t));
 };
 
 #endif

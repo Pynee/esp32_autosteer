@@ -1,6 +1,14 @@
 #include "IMUHandler.h"
 #include <stdio.h>
 #include "BNO08x.hpp"
+#include "driver/gpio.h"
+
+static void IRAM_ATTR gpio_isr_handler(void *arg)
+{
+    uint8_t item = 1;
+    IMUHandler *handler = (IMUHandler *)arg;
+    xQueueSendFromISR(handler->gpioEventQueue, &item, NULL);
+}
 
 IMUHandler::IMUHandler()
 {
@@ -39,56 +47,71 @@ void IMUHandler::imuWorker(void *z)
             return;
         }
         */
-        if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 20000))
+        if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000))
         {
             Serial.println("Could not enable rotation vector");
         }
+        // prepare interrupt on falling edge (= signal of new data available)
+        // attachInterrupt(digitalPinToInterrupt(imuINTPin), interrupt_handler, FALLING);
+
+        // change gpio interrupt type for one pin
+        gpio_set_intr_type(gpio_num_t(BNO08X_INT), GPIO_INTR_NEGEDGE);
+        // install gpio isr service
+        gpio_install_isr_service(0);
+        // hook isr handler for specific gpio pin
+        gpio_isr_handler_add(gpio_num_t(BNO08X_INT), gpio_isr_handler, (void *)this);
+
         TickType_t xLastWakeTime = xTaskGetTickCount();
         for (;;)
         {
-            vTaskDelayUntil(&xLastWakeTime, 20 / portTICK_PERIOD_MS);
-
-            if (bno08x.wasReset())
+            uint8_t queueItem;
+            if (xQueueReceive(gpioEventQueue, &queueItem, portMAX_DELAY) == pdTRUE)
             {
-                Serial.print("sensor was reset ");
-                /*
-                if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR))
-                {
-                    Serial.println("Could not enable game vector");
-                }
-                */
-                if (!bno08x.enableReport(SH2_ROTATION_VECTOR))
-                {
-                    Serial.println("Could not enable rotation vector");
-                }
-            }
 
-            if (bno08x.getSensorEvent(&sensorValue))
-            {
-                switch (sensorValue.sensorId)
-                {
-                /*
-                case SH2_GAME_ROTATION_VECTOR:
-                {
-                    imuVector.time = millis();
-                    imuVector.qr = sensorValue.un.gameRotationVector.real;
-                    imuVector.qi = sensorValue.un.gameRotationVector.i;
-                    imuVector.qj = sensorValue.un.gameRotationVector.j;
-                    imuVector.qk = sensorValue.un.gameRotationVector.k;
+                // vTaskDelayUntil(&xLastWakeTime, 20 / portTICK_PERIOD_MS);
 
-                    break;
-                }
-                */
-                case SH2_ROTATION_VECTOR:
+                if (bno08x.wasReset())
                 {
-                    imuVector.time = millis();
-                    imuVector.qr = sensorValue.un.rotationVector.real;
-                    imuVector.qi = sensorValue.un.rotationVector.i;
-                    imuVector.qj = sensorValue.un.rotationVector.j;
-                    imuVector.qk = sensorValue.un.rotationVector.k;
-                    calculateEuler();
-                    break;
+                    Serial.print("sensor was reset ");
+                    /*
+                    if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR))
+                    {
+                        Serial.println("Could not enable game vector");
+                    }
+                    */
+                    if (!bno08x.enableReport(SH2_ROTATION_VECTOR))
+                    {
+                        Serial.println("Could not enable rotation vector");
+                    }
                 }
+
+                if (bno08x.getSensorEvent(&sensorValue))
+                {
+                    switch (sensorValue.sensorId)
+                    {
+                    /*
+                    case SH2_GAME_ROTATION_VECTOR:
+                    {
+                        imuVector.time = millis();
+                        imuVector.qr = sensorValue.un.gameRotationVector.real;
+                        imuVector.qi = sensorValue.un.gameRotationVector.i;
+                        imuVector.qj = sensorValue.un.gameRotationVector.j;
+                        imuVector.qk = sensorValue.un.gameRotationVector.k;
+
+                        break;
+                    }
+                    */
+                    case SH2_ROTATION_VECTOR:
+                    {
+                        dataToSend.time = millis();
+                        imuVector.qr = sensorValue.un.rotationVector.real;
+                        imuVector.qi = sensorValue.un.rotationVector.i;
+                        imuVector.qj = sensorValue.un.rotationVector.j;
+                        imuVector.qk = sensorValue.un.rotationVector.k;
+                        calculateEuler();
+                        break;
+                    }
+                    }
                 }
             }
         }

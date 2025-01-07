@@ -68,6 +68,7 @@ struct AOGDataToSend // Data struct for variables that are sent to AOG
     double currentSteerAngle;
     uint8_t pwmDisplay;
     bool imuAvailable;
+    unsigned long time;
     uint8_t imuHeading[6];
     int16_t heading;
     uint8_t imuRoll[6];
