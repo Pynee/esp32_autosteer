@@ -52,7 +52,7 @@ public:
     static void eventHandler(void *arguments, esp_event_base_t eventBase,
                              int32_t eventID, void *eventData);
     bool init(PGNCommManager *commManager);
-    uint8_t ntripBuffer[128];
+    uint8_t ntripBuffer[512];
     uint8_t data[128] = {49};
     // Queue to send data over UDP
     QueueHandle_t sendQueue = xQueueCreate(20, sizeof(struct QueueItem));
