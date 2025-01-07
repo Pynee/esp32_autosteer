@@ -102,6 +102,20 @@ To monitor the serial output (e.g., for debugging or logging), you can use the *
 ├── platformio.ini         # PlatformIO configuration file
 └── README.md              # Project documentation (this file)
 ```
+**Tasks**
+
+|Tasks                     |trigger/interval                       |priority|purpose          |
+|--------------------------|---------------------------------------|--------|-----------------|
+|autosteerTask             |AUTOSTEER_INTERVAL (default 100ms)     |3       |Handles everything steeringmotor/hydraulic related things|
+|gnssreceiveTask           |trigger on new data from gnss board    |3       |Handles communication from gps board|
+|gnssSendTask              |proxies ntrip data to gnss             |3       |proxies ntrip data to gnss 
+|imuTask                   |triggers on new data from IMU board    |3       |handles communication from IMU board|
+|inputTask                 |LOOP_TIME(default 20ms)                |3       |Reads switch states(steer and work switch etc.) and analog sensors(WAS for now)|
+|uartEventTask             |trigger on new data from UART          |3       |Handles UART(Serial) communication|
+|PGNCMSendTask/PGNCMRevTask|trigger when new message added to queue|3       |Handles PGN routing|
+|UDPSendTask               |trigger when new message added to queue|3       |Handles UDP messages|
+|WifiManager               |WIFIMANAGER_INTERVAL (default 50ms)    |3       |Handles wifi connection/webserver|
+
 
 ## Troubleshooting
 
@@ -123,25 +137,6 @@ To monitor the serial output (e.g., for debugging or logging), you can use the *
 This project is licensed under the GPL-3.0 license - see the [LICENSE](LICENSE) file for details.
 
 ---
-
-
-
-|Task            |trigger/interval                       |priority|purpose          |
-|----------------|---------------------------------------|--------|-----------------|
-|autosteerWorker |AUTOSTEER_INTERVAL (default 100ms)     |3       |Handles everything steeringmotor/hydraulic related things|
-|gnssStreamWorker|trigger on new data from gnss board    |3       |Handles communication to/from gps board|
-|imuWorker       |triggers on new data from IMU board    |3       |handles communication from IMU board|
-|inputWorker     |LOOP_TIME(default 20ms)|3|Reads switch states(steer and work switch etc.) and analog sensors(WAS for now)|
-|uartEventWorker |trigger on new data from UART          |3       |Handles UART(Serial) communication|
-|sendDataTask    |trigger when new message added to queue|3       |Handles UDP send queue|
-|WifiManager     |???                                    |?       |Handles wifi connection|
-
-
-
-
-
-Input
-
 
 using these submodules that you can find in the lib folder:
 
