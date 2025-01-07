@@ -184,4 +184,43 @@ std::string testStrings[] = {"1", "2"};
   // wifiManager.startConfigPortal();
   // wifiManager.setEnableConfigPortal(false);
 
+
+
+function openPage(id){
+  const p = document.querySelector("[tab-name='"+id+"']");
+  const tabs = document.querySelectorAll(".tabs .tabcontent");
+  for(var  x =0; x < tabs.length; x++)
+      tabs[x].classList.add("d-none");
+  if(p !== null){
+    p.classList.remove("d-none");
+  }
+}
+
+
+.d-none{ display:none; }
+
+
+<select onchange="openPage(this.value)">
+  <option value="tabOne">Tab One</option>
+  <option value="tabTwo">Tab Two</option>
+  <option value="tabThree">Tab Three</option>
+</select>
+
+<div class="tabs">
+  <div tab-name="tabOne" class="tabcontent">
+    <h3>Tab One</h3>
+    <p>11111111111</p>
+  </div>
+
+  <div tab-name="tabTwo" class="tabcontent d-none">
+    <h3>Tab Two</h3>
+    <p>22222222222</p>
+  </div>
+
+  <div tab-name="tabThree" class="tabcontent d-none">
+    <h3>Tab Three</h3>
+    <p>33333333333</p>
+  </div>
+
+</div>
   */

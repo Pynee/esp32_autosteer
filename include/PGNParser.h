@@ -43,6 +43,6 @@ public:
     uint8_t scanReply[13] = {128, 129, 126, 203, 7, 0, 0, 0, 0, 0, 0, 0, 23};
     PGNParser(PGNCommManager *commManager);
     QueueHandle_t parseQueue = xQueueCreate(10, sizeof(struct QueueItem));
-    void parsePacket(uint8_t *packet, int size);
+    void parsePacket(uint8_t *packet, unsigned int size);
 };
 #endif
