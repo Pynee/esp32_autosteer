@@ -152,8 +152,8 @@ void UART::uartEventWorker(void *pvParameters)
             }
         }
     }
-    free(dataBuffer);
-    // dataBuffer = NULL;
+    // free(dataBuffer);
+    //  dataBuffer = NULL;
     vTaskDelete(NULL);
 }
 

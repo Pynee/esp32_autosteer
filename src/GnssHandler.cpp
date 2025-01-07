@@ -59,9 +59,6 @@ void GNSSHandler::sendTask(void *z)
     QueueItem queueItem;
     if (xQueueReceive(sendQueue, &queueItem, portMAX_DELAY) == pdTRUE)
     {
-      // Serial.print("received to GNSShandler: ");
-      Serial.write(queueItem.data, 10);
-      Serial.println();
       gnssUart.write(queueItem.data, queueItem.length);
     }
   }

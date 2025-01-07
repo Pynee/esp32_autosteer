@@ -51,11 +51,10 @@ void PGNParser::packetParserTask(void *z)
     }
 }
 
-void PGNParser::parsePacket(uint8_t *packet, int size)
+void PGNParser::parsePacket(uint8_t *packet, unsigned int size)
 {
-    size = min(size, ((int)packet[4]) + 6);
+    size = min(size, (unsigned int)packet[4] + 6);
 
-    // Serial.println("Parsing...");
     if (packet[0] != 128 || packet[1] != 129)
     {
         return;
@@ -63,6 +62,7 @@ void PGNParser::parsePacket(uint8_t *packet, int size)
 
     if (packet[size - 1] != 71 && packet[size - 1] != calculateChecksum((uint8_t *)packet, 2, size))
     {
+        Serial.println(min(size, (unsigned int)packet[4] + 6));
         Serial.print("Packet ''CRC'' error: correct = ");
         Serial.print(packet[size - 1]);
         Serial.print(", calculated = ");
