@@ -25,8 +25,8 @@ void GNSSHandler::init(PandaBuilder *pandaBuilder)
                     { GGA_Handler(); });
   parser.addHandler("G-VTG", [this]()
                     { VTG_Handler(); });
-  xTaskCreate(startReceiveImpl, "gnssreceiveTask", 3096, this, 3, NULL);
-  xTaskCreate(startReceiveImpl, "gnssSendTask", 3096, this, 3, NULL);
+  xTaskCreatePinnedToCore(startReceiveImpl, "gnssreceiveTask", 3096, this, 3, NULL, 1);
+  xTaskCreatePinnedToCore(startReceiveImpl, "gnssSendTask", 3096, this, 3, NULL, 1);
 }
 //[this]{VTG_Handler();};
 // std::bind(GNSSHandler::GGA_Handler,this)
@@ -59,6 +59,9 @@ void GNSSHandler::sendTask(void *z)
     QueueItem queueItem;
     if (xQueueReceive(sendQueue, &queueItem, portMAX_DELAY) == pdTRUE)
     {
+      Serial.print("received to GNSShandler: ");
+      Serial.write(queueItem.data, queueItem.length);
+      Serial.println();
       gnssUart.print(*queueItem.data, (size_t)queueItem.length);
     }
   }
