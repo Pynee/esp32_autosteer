@@ -5,7 +5,6 @@
 #include <ESP.h>
 #include <freertos/FreeRTOS.h>
 #include <esp_wifi.h>
-#include <elapsedMillis.h>
 #include <ESPmDNS.h>
 #include <WiFiManager.h>
 #include "AsyncUDP.h"

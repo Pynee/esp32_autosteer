@@ -3,7 +3,6 @@
 
 #include <ESP.h>
 #include <esp_wifi.h>
-#include <elapsedMillis.h>
 #include "AsyncUDP.h"
 #include "configuration.h"
 #include "PGNParser.h"

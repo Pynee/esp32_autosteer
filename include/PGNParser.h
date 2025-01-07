@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <ESP.h>
 #include <esp_wifi.h>
-#include <elapsedMillis.h>
 #include <WiFiManager.h>
 #include "AsyncUDP.h"
 #include <EEPROM.h>
