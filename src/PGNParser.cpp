@@ -140,6 +140,10 @@ void PGNParser::parsePacket(uint8_t *packet, int size)
         case 100: // Corrected location fix2fix lat lon but we ignore this atleast for now
             break;
 
+        case 229: // section data for machine
+        case 239: // machine data
+            break;
+
         default:
             Serial.println("Unknown packet!!!");
             printLnByteArray(packet, size);
