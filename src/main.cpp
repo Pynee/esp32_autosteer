@@ -41,7 +41,7 @@ State state;
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_BUILTIN, LOW);
   Serial.setDebugOutput(true);
   Serial.begin(115200);
   packetManager.init(&pgnCommManager);

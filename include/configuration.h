@@ -42,7 +42,7 @@
 #define LOW_HIGH_DEGREES 3.0
 
 #define AUTOSTEER_INTERVAL 100 // read GPIO millisec 10hz
-#define WIFIMANAGER_INTERVAL 100
+#define WIFIMANAGER_INTERVAL 50
 // loop time variables in milliseconds
 const uint16_t LOOP_TIME = 20; // 50Hz
 const uint16_t WATCHDOG_THRESHOLD = 100;

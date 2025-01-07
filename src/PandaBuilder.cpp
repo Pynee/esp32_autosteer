@@ -82,8 +82,8 @@ void PandaBuilder::buildPanda(NMEAMessage *nmeaMessage)
     strcat(nmea, "\r\n");
 
     int len = strlen(nmea);
-
     QueueItem item = {(uint8_t *)nmea, strlen(nmea)};
+    Serial.println(millis() - dataToSend.time);
     xQueueSend(pgnmanager->managerSendQueue, (void *)&item, (TickType_t)0);
 }
 // Calculate nmea checksum and append it to the sentence
