@@ -159,6 +159,12 @@ void UART::uartEventWorker(void *pvParameters)
 
 size_t UART::write(uint8_t c)
 {
-    uart_write_bytes(port, (const char *)c, sizeof(c));
+    uart_write_bytes(port, (const uint8_t *)c, sizeof(c));
+    return 1;
+}
+
+size_t UART::write(const uint8_t *buffer, size_t size)
+{
+    uart_write_bytes(port, (const uint8_t *)buffer, size);
     return 1;
 }

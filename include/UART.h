@@ -59,7 +59,8 @@ public:
     void init();
     void init(int TX_PIN, int RX_PIN);
     void setCallback(void callback(uint8_t *data, size_t len));
-    virtual size_t write(uint8_t);
+    virtual size_t write(uint8_t) override;
+    virtual size_t write(const uint8_t *buffer, size_t size) override;
     inline size_t write(unsigned long n) { return write((uint8_t)n); }
     inline size_t write(long n) { return write((uint8_t)n); }
     inline size_t write(unsigned int n) { return write((uint8_t)n); }

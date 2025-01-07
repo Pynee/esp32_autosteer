@@ -61,7 +61,7 @@ void PGNParser::parsePacket(uint8_t *packet, int size)
         return;
     }
 
-    if (packet[size - 1] != calculateChecksum((uint8_t *)packet, 2, size))
+    if (packet[size - 1] != 71 && packet[size - 1] != calculateChecksum((uint8_t *)packet, 2, size))
     {
         Serial.print("Packet ''CRC'' error: correct = ");
         Serial.print(packet[size - 1]);

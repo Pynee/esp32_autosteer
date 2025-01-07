@@ -40,8 +40,6 @@ void UDPPacketManager::ntripPacketProxy(AsyncUDPPacket packet)
     packet.read(this->ntripBuffer, packet.length());
     // gnssSendData(this->ntripBuffer, packet.length());
     QueueItem item = {this->ntripBuffer, packet.length()};
-    // Serial.print("received: ");
-    // Serial.println(packet.length());
     xQueueSend(gnssHandler->sendQueue, &item, (TickType_t)0);
   }
 }
@@ -60,7 +58,7 @@ void UDPPacketManager::autoSteerPacketParser(AsyncUDPPacket udpPacket)
     udpPacket.read(this->data, min((size_t)128, udpPacket.length()));
 
     // Lock receiving messages only from AOG and stop broadcasting response messages
-    if (!destinationIPSet && this->data[0] == 0x80 && this->data[1] == 0x81 && this->data[2] == 0x7F && this->data[4] == 3 && this->data[5] == 202 && this->data[6] == 202)
+    if (!destinationIPSet && this->data[0] == 0x80 && this->data[1] == 0x81 && this->data[2] == 0x7F && this->data[3] == 200 && this->data[4] == 3)
     {
       Serial.println("Destinationset!");
       destinationIP = udpPacket.remoteIP();
