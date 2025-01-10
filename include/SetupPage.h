@@ -1,5 +1,12 @@
 #include <WiFiManager.h>
 
+const char HTTP_FORM_CUSTOM_PARAM[] PROGMEM = "<br/><input type='{t}' id='{i}' name='{n}' min='{e}' max='{h}' value='{v}' size='{l}'>\n"; // do not remove newline!
+const char HTTP_FORM_SELECT_START[] PROGMEM = "<select onchange='{v}' name='{n}'>";
+const char HTTP_FORM_SELECT_OPTION[] PROGMEM = "<option value='{v}' {c}>'{t}'</option>";
+const char HTTP_FORM_SELECT_END[] PROGMEM = "</select>";
+const char HTTP_FORM_TAB[] PROGMEM = "<div tab-name={'n'} class=\"tabcontent '{c}'\">";
+const char HTTP_DIV_END[] PROGMEM = "</div>";
+
 std::string inputSelect(std::string name, std::string *strings, int stringArraySize, int selected)
 {
     std::string returnStr = "<!-- INPUT SELECT --><br/><label for='input_select'>";
@@ -60,10 +67,10 @@ private:
     WiFiManagerParameter parameters[parameterAmount] = {
         {"<p style=\"font-weight:Bold;\">AgOpenGPS Settings</p>"},
         {"<p style=\"font-weight:Bold;\">Send data to:</p>"},
-        {"my_serial", "Serial", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
-        {"my_wifi", "WIFI", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
-        {"my_ethernet", "Ethernet", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
-        {"my_can", "CAN", "T", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
+        {"my_serial", "Serial", "1", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
+        {"my_wifi", "WIFI", "1", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
+        {"my_ethernet", "Ethernet", "1", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
+        {"my_can", "CAN", "1", 2, _customHtml_checkbox, WFM_LABEL_AFTER},
         {"<p style=\"font-weight:Bold;\">IMU:</p>"},
         {selectParameters[0].customString.c_str()},
         {"<p style=\"font-weight:Bold;\">IMU connection:</p>"},
@@ -185,42 +192,42 @@ std::string testStrings[] = {"1", "2"};
   // wifiManager.setEnableConfigPortal(false);
 
 
-
-function openPage(id){
-  const p = document.querySelector("[tab-name='"+id+"']");
-  const tabs = document.querySelectorAll(".tabs .tabcontent");
-  for(var  x =0; x < tabs.length; x++)
-      tabs[x].classList.add("d-none");
-  if(p !== null){
-    p.classList.remove("d-none");
-  }
+{
+    "board": "3",
+    "debugPort": "0",
+    "DebugTX": "-1",
+    "DebugRX": "-1",
+    "gnssPort": "2",
+    "GNSSTX": "39",
+    "GNSSRX": "38",
+    "IMU": "0",
+    "imuConnection": "0",
+    "spiSck": "36",
+    "spiMiso": "37",
+    "spiMosi": "35",
+    "spiCS": "10",
+    "intPin": "9",
+    "rstPin": "5",
+    "I2CSCL": "-1",
+    "I2CSDA": "-1",
+    "IMUPORT": "-1",
+    "IMUTX": "39",
+    "IMURX": "38",
+    "ntripPort": "2233",
+    "steerPort": "8888",
+    "destinationPort": "9999",
+    "pwmFreq": "2",
+    "steerEnablePin": "8",
+    "pwm1Pin": "15",
+    "pwm2Pin": "14",
+    "steerSwitchPin": "18",
+    "workSwitchPin": "17",
+    "remoteSwitchPin": "16",
+    "loadSensorPin": "15",
+    "wasSensorPin": "14",
+    "send2Serial": "1",
+    "send2WiFi": "1"
 }
 
 
-.d-none{ display:none; }
-
-
-<select onchange="openPage(this.value)">
-  <option value="tabOne">Tab One</option>
-  <option value="tabTwo">Tab Two</option>
-  <option value="tabThree">Tab Three</option>
-</select>
-
-<div class="tabs">
-  <div tab-name="tabOne" class="tabcontent">
-    <h3>Tab One</h3>
-    <p>11111111111</p>
-  </div>
-
-  <div tab-name="tabTwo" class="tabcontent d-none">
-    <h3>Tab Two</h3>
-    <p>22222222222</p>
-  </div>
-
-  <div tab-name="tabThree" class="tabcontent d-none">
-    <h3>Tab Three</h3>
-    <p>33333333333</p>
-  </div>
-
-</div>
   */

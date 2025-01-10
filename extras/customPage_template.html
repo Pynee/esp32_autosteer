@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta charset="utf-8" />
+    <style>
+      .d-none {
+        display: none;
+      }
+    </style>
+    <scirpt
+      >function openPage(e){let
+      a=e.parentNode,r=a.querySelector("[tab-name='"+e.value+"']"),l=a.querySelectorAll(":scope
+      >.tabcontent");for(var
+      s=0;s<l.length;s++)l[s].classList.add("d-none");null!==r&&r.classList.remove("d-none")}function
+      noDupeValues(e){for(var
+      a=document.querySelectorAll("input[type=number]"),r={},l=0,s=a.length;l<s;++l){var
+      n=a[l].value.trim();if(n&&"-1"!=n){if(a[l].className=a[l].className.replace("error",""),r[n]){a[l].className+="
+      error",r[n].className+=" error",event.preventDefault();let
+      t=document.querySelector("#message");t.innerHTML="Some pins are used
+      multiple times please check
+      values",t.className=t.className.replace("d-none","")}r[n]=a[l]}}return!0}</scirpt
+    >
+    <script>
+      function openPage(s) {
+        const e = s.parentNode;
+        const p = e.querySelector("[tab-name='" + s.value + "']");
+        const tabs = e.querySelectorAll(":scope >.tabcontent");
+        for (var x = 0; x < tabs.length; x++) tabs[x].classList.add("d-none");
+        if (p !== null) {
+          p.classList.remove("d-none");
+        }
+      }
+      function noDupeValues(t) {
+        var ins = document.querySelectorAll("input[type=number]");
+        var tracker = {};
+        for (var i = 0, numIns = ins.length; i < numIns; ++i) {
+          var inValue = ins[i].value.trim();
+          if (!inValue || inValue == "-1") continue;
+          ins[i].className = ins[i].className.replace("error", "");
+          if (tracker[inValue]) {
+            ins[i].className += " error";
+            tracker[inValue].className += " error";
+            event.preventDefault();
+            const err = document.querySelector("#message");
+            err.innerHTML =
+              "Some pins are used multiple times please check values";
+            err.className = err.className.replace("d-none", "");
+          }
+          tracker[inValue] = ins[i];
+        }
+        return true;
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <form action="/paramsave" method="POST">
+        <select onchange="openPage(this)" name="board">
+          <option value="1">AIO 5 board</option>
+          <option value="2">ESP32 board</option>
+          <option value="3" selected>Advanced</option>
+        </select>
+        <div tab-name="1" class="tabcontent d-none">
+          <h3>Tab One</h3>
+          <p>11111111111</p>
+        </div>
+
+        <div tab-name="2" class="tabcontent d-none">
+          <h3>Tab Two</h3>
+          <p>22222222222</p>
+        </div>
+
+        <div tab-name="3" class="tabcontent">
+          <h3>Tab Three</h3>
+          <label for="fname">Debug UART port:</label>
+          <select name="debugPort">
+            <option value="-1">None</option>
+            <option value="0" selected>Uart0</option>
+            <option value="2">Uart2</option></select
+          ><br />
+          <label for="DebugTX">Debug tx: GPIO</label>
+          <input
+            type="number"
+            name="DebugTX"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="-1"
+          /><br />
+          <label for="DebugRX">Debug rx: GPIO</label>
+          <input
+            type="number"
+            name="DebugRX"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="-1"
+          /><br /><br />
+          <label for="gnssPort">GNSS UART port:</label>
+          <select name="gnssPort">
+            <option value="-1">None</option>
+            <option value="0">Uart0</option>
+            <option value="2" selected>Uart2</option></select
+          ><br />
+          <label for="GNSSTX">GNSS tx: GPIO</label>
+          <input
+            type="number"
+            name="GNSSTX"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="39"
+          /><br />
+          <label for="GNSSRX">GNSS rx: GPIO</label>
+          <input
+            type="number"
+            name="GNSSRX"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="38"
+          /><br /><br />
+          <fieldset>
+            <legend>IMU pins:</legend>
+            <label for="IMU">IMU:</label>
+            <select name="IMU">
+              <option value="0">BNO08x</option>
+              <option value="1">???</option>
+            </select>
+            <br /><br />
+            <div>
+              <label for="imuConnection">IMU connection:</label>
+              <select onchange="openPage(this)" name="imuConnection">
+                <option value="0">SPI</option>
+                <option value="1">I2C/RVC</option>
+                <option value="2">Uart</option></select
+              ><br /><br />
+
+              <div tab-name="0" class="tabcontent">
+                <label for="spiSck">SPI SCK: GPIO</label>
+                <input
+                  type="number"
+                  name="spiSck"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="36"
+                /><br />
+                <label for="spiMiso">SPI MISO: GPIO</label>
+                <input
+                  type="number"
+                  name="spiMiso"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="37"
+                /><br />
+                <label for="spiMosi">SPI MOSI: GPIO</label>
+                <input
+                  type="number"
+                  name="spiMosi"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="35"
+                /><br />
+                <label for="spiCS">SPI CS: GPIO</label>
+                <input
+                  type="number"
+                  name="spiCS"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="10"
+                /><br />
+                <label for="intPin">Interrupt pin: GPIO</label>
+                <input
+                  type="number"
+                  name="intPin"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="9"
+                /><br />
+                <label for="rstPin">Reset pin: GPIO</label>
+                <input
+                  type="number"
+                  name="rstPin"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="5"
+                /><br /><br />
+              </div>
+
+              <div tab-name="1" class="tabcontent d-none">
+                <label for="I2CSCL">I2C SCL: GPIO</label>
+                <input
+                  type="number"
+                  name="I2CSCL"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="-1"
+                /><br />
+                <label for="I2CSDA">I2C SDA: GPIO</label>
+                <input
+                  type="number"
+                  name="I2CSDA"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="-1"
+                /><br /><br />
+              </div>
+
+              <div tab-name="2" class="tabcontent d-none">
+                <label for="IMUPORT">IMU Uart port:</label>
+                <select name="IMUPORT">
+                  <option value="-1" selected>None</option>
+                  <option value="0">Uart0</option>
+                  <option value="2">Uart2</option></select
+                ><br />
+                <label for="IMUTX">IMU tx: GPIO</label>
+                <input
+                  type="number"
+                  name="IMUTX"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="39"
+                /><br />
+                <label for="IMURX">IMU rx: GPIO</label>
+                <input
+                  type="number"
+                  name="IMURX"
+                  required
+                  min="-1"
+                  max="40"
+                  size="1"
+                  value="38"
+                /><br /><br />
+              </div>
+            </div>
+          </fieldset>
+          <label for="ntripPort">Ntrip UDP port:</label>
+          <input
+            type="number"
+            id="ntripPort"
+            name="ntripPort"
+            min="1024"
+            max="65535"
+            value="2233"
+            size="5"
+          /><br />
+          <label for="steerPort">autosteer UDP port:</label>
+          <input
+            type="number"
+            name="steerPort"
+            min="1024"
+            max="65535"
+            value="8888"
+            size="5"
+          /><br />
+          <label for="destinationPort">destination UDP port:</label>
+          <input
+            type="number"
+            name="destinationPort"
+            min="1024"
+            max="65535"
+            value="9999"
+            size="5"
+          /><br /><br />
+          <label for="fname">PWM Frequency:</label>
+          <select name="pwmFreq">
+            <option value="1">112 Hz</option>
+            <option value="2" selected>490 Hz</option>
+            <option value="3">3921 Hz</option></select
+          ><br />
+          <label for="steerEnablePin">Steermotor enable/dir: GPIO</label>
+          <input
+            type="number"
+            name="steerEnablePin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="8"
+          /><br />
+          <label for="pwm1Pin">PWM1 pin:</label>
+          <input
+            type="number"
+            name="pwm1Pin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="15"
+          /><br />
+          <label for="pwm2Pin">PWM2 pin:</label>
+          <input
+            type="number"
+            name="pwm2Pin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="14"
+          /><br /><br />
+
+          <label for="steerSwitchPin">steerswitch pin:</label>
+          <input
+            type="number"
+            name="steerSwitchPin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="18"
+          /><br />
+          <label for="workSwitchPin">workswitch pin:</label>
+          <input
+            type="number"
+            name="workSwitchPin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="17"
+          /><br />
+          <label for="remoteSwitchPin">remoteswitch pin:</label>
+          <input
+            type="number"
+            name="remoteSwitchPin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="16"
+          /><br /><br />
+          <label for="loadSensorPin">loadSensor pin:</label>
+          <input
+            type="number"
+            name="loadSensorPin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="15"
+          /><br />
+          <label for="wasSensorPin">wheelangleSensor pin:</label>
+          <input
+            type="number"
+            name="wasSensorPin"
+            required
+            min="-1"
+            max="40"
+            size="1"
+            value="14"
+          /><br /><br />
+          <fieldset>
+            <legend>Send data to:</legend>
+
+            <input type="checkbox" name="send2Serial" value="1" checked />
+            <label for="send2Serial">Serial</label>
+            <input type="checkbox" name="send2WiFi" value="1" checked />
+            <label for="send2WiFi">WiFi</label>
+            <input type="checkbox" name="send2Ethernet" value="1" />
+            <label for="send2Ethernet">Ethernet</label>
+            <input type="checkbox" name="send2CAN" value="1" />
+            <label for="send2CAN">CAN</label>
+          </fieldset>
+        </div>
+
+        <input type="submit" value="Save settings" />
+      </form>
+    </main>
+    <script src="sketch.js"></script>
+  </body>
+</html>

@@ -105,7 +105,7 @@ BNO08x::BNO08x(bno08x_config_t imu_config)
     spi_device_polling_transmit(spi_hdl, &spi_transaction); // send data packet
 
     spi_task_hdl = NULL;
-    xTaskCreate(&spi_task_trampoline, "spi_task", 4096, this, 8, &spi_task_hdl); // launch SPI task
+    xTaskCreatePinnedToCore(&spi_task_trampoline, "spi_task", 4096, this, 8, &spi_task_hdl, 1); // launch SPI task
 }
 
 /**

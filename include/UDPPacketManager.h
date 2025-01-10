@@ -23,7 +23,7 @@ class UDPPacketManager
 private:
     // UART gnssUART;
     // uint8_t data[16384];
-
+    WiFiManager wifiManager;
     uint8_t *buffer;
     int bufferIndex = 0;
 
@@ -45,6 +45,10 @@ private:
     void wifimanagerWorker(void *z);
     GNSSHandler *gnssHandler;
     std::string inputSelect(std::string name, std::string *strings, int stringArraySize, int selected);
+    void handleRoute();
+    String handleSetupPage();
+    void bindServerCallback();
+    void handleNotFound();
 
 public:
     UDPPacketManager(GNSSHandler *gnssHandler);

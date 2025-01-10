@@ -140,14 +140,73 @@ void UDPPacketManager::startWifimanagerWorker(void *_this)
   ((UDPPacketManager *)_this)->wifimanagerWorker(_this);
 }
 
+String UDPPacketManager::handleSetupPage()
+{
+  String page;
+  page += FPSTR(HTTP_HEAD_START);
+  page.replace(FPSTR(T_v), "AoG setup");
+  page += FPSTR(HTTP_SCRIPT);
+  page += FPSTR(HTTP_STYLE);
+  page += FPSTR(HTTP_HEAD_END);
+  String pitem = "";
+
+  pitem = FPSTR(HTTP_FORM_START);
+  pitem.replace(FPSTR(T_v), F("paramsave"));
+  page += pitem;
+  pitem = FPSTR(HTTP_FORM_SELECT_START);
+  pitem.replace(FPSTR(T_v), F("openPage(this)"));
+  pitem.replace(FPSTR(T_n), F("board"));
+  page = pitem;
+  String options[] = {"AIO 5 board", "ESP32 board", "Advanced"};
+  for (int i = 0; i < 3; i++)
+  {
+    pitem = FPSTR(HTTP_FORM_SELECT_OPTION);
+    pitem.replace(FPSTR(T_v), String(i));
+    pitem.replace(FPSTR(T_t), options[i]);
+    if (i = board)
+    {
+      pitem.replace(FPSTR(T_c), F(" selected"));
+    }
+  }
+  page += pitem;
+  page = FPSTR(HTTP_FORM_SELECT_END);
+
+  page += FPSTR(HTTP_FORM_END);
+  page += FPSTR(HTTP_BACKBTN);
+  page += FPSTR(HTTP_END);
+
+  return page;
+}
+
+void UDPPacketManager::handleRoute()
+{
+  Serial.println("[HTTP] handle route Custom");
+  wifiManager.server->send(200, FPSTR(HTTP_HEAD_CT), handleSetupPage());
+}
+void UDPPacketManager::handleNotFound()
+{
+  Serial.println("[HTTP] override handle route");
+  wifiManager.handleNotFound();
+}
+
+void UDPPacketManager::bindServerCallback()
+{
+  wifiManager.server->on("/param", std::bind(&UDPPacketManager::handleRoute, this));
+
+  // you can override wm route endpoints, I have not found a way to remove handlers, but this would let you disable them or add auth etc.
+  // wm.server->on("/info",handleNotFound);
+  // wm.server->on("/update",handleNotFound);
+  wifiManager.server->on("/erase", std::bind(&UDPPacketManager::handleNotFound, this)); // disable erase
+}
+
 void UDPPacketManager::wifimanagerWorker(void *z)
 {
-  bool socketsStarted = false;
+  UDPPacketManager *pThis = (UDPPacketManager *)z;
+  WiFiManager *wifimanager = &pThis->wifiManager;
 
-  WiFiManager wifiManager;
-  SetupPage setupPage(&wifiManager);
-  setupPage.init();
-
+  // SetupPage setupPage(&wifiManager);
+  // setupPage.init();
+  wifiManager.setWebServerCallback(std::bind(&UDPPacketManager::bindServerCallback, this));
   wifiManager.setDarkMode(true);
   std::vector<const char *> menu = {"wifi", "info", "param", "sep", "update", "restart", "exit"};
   wifiManager.setMenu(menu); // custom menu, pass vector

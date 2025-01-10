@@ -57,4 +57,6 @@ const uint16_t AOGTIMEOUT = 100; // How many milliseconds without steering updat
 #define useEthernet true
 #define useCan true
 
+uint8_t board = 2;
+
 #endif
