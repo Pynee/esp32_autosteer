@@ -8,19 +8,42 @@
         display: none;
       }
     </style>
-    <scirpt
-      >function openPage(e){let
-      a=e.parentNode,r=a.querySelector("[tab-name='"+e.value+"']"),l=a.querySelectorAll(":scope
-      >.tabcontent");for(var
-      s=0;s<l.length;s++)l[s].classList.add("d-none");null!==r&&r.classList.remove("d-none")}function
-      noDupeValues(e){for(var
-      a=document.querySelectorAll("input[type=number]"),r={},l=0,s=a.length;l<s;++l){var
-      n=a[l].value.trim();if(n&&"-1"!=n){if(a[l].className=a[l].className.replace("error",""),r[n]){a[l].className+="
-      error",r[n].className+=" error",event.preventDefault();let
-      t=document.querySelector("#message");t.innerHTML="Some pins are used
-      multiple times please check
-      values",t.className=t.className.replace("d-none","")}r[n]=a[l]}}return!0}</scirpt
-    >
+    <script>
+      function openPage(e) {
+        let a = e.parentNode,
+          r = a.querySelector("[tab-name='" + e.value + "']"),
+          l = a.querySelectorAll(":scope>.tabcontent");
+        for (var s = 0; s < l.length; s++) l[s].classList.add("d-none");
+        null !== r && r.classList.remove("d-none");
+      }
+      function noDupeValues(e) {
+        for (
+          var a = document.querySelectorAll("input[type=number]"),
+            r = {},
+            l = 0,
+            s = a.length;
+          l < s;
+          ++l
+        ) {
+          var n = a[l].value.trim();
+          if (n && "-1" != n) {
+            if (
+              ((a[l].className = a[l].className.replace("error", "")), r[n])
+            ) {
+              (a[l].className += "error"),
+                (r[n].className += " error"),
+                event.preventDefault();
+              let t = document.querySelector("#message");
+              (t.innerHTML =
+                "Some pins are usedmultiple times please checkvalues"),
+                (t.className = t.className.replace("d-none", ""));
+            }
+            r[n] = a[l];
+          }
+        }
+        return !0;
+      }
+    </script>
     <script>
       function openPage(s) {
         const e = s.parentNode;
@@ -73,7 +96,7 @@
 
         <div tab-name="3" class="tabcontent">
           <h3>Tab Three</h3>
-          <label for="fname">Debug UART port:</label>
+          <label for="debugPort">Debug UART port:</label>
           <select name="debugPort">
             <option value="-1">None</option>
             <option value="0" selected>Uart0</option>

@@ -163,12 +163,28 @@ String UDPPacketManager::handleSetupPage()
     pitem = FPSTR(HTTP_FORM_SELECT_OPTION);
     pitem.replace(FPSTR(T_v), String(i));
     pitem.replace(FPSTR(T_t), options[i]);
-    if (i = board)
+    if (i == board)
     {
       pitem.replace(FPSTR(T_c), F(" selected"));
     }
+    for(int j = 0; j < 3;j++){
+      
+
+    }
   }
-  page += pitem;
+  for (int i = 0; i < 3; i++)
+  {
+    page += pitem;
+    pitem = FPSTR(HTTP_FORM_TAB);
+    pitem.replace(FPSTR(T_n), options[1]);
+    if (i != board)
+    {
+      pitem.replace(FPSTR(T_c), "d-none");
+    }
+
+    page = FPSTR(HTTP_DIV_END);
+  };
+
   page = FPSTR(HTTP_FORM_SELECT_END);
 
   page += FPSTR(HTTP_FORM_END);

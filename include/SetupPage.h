@@ -1,5 +1,7 @@
 #include <WiFiManager.h>
 
+const char HTTP_CUSTOM_CSS[] PROGMEM = "<style>.d-none {display: none;}</style>";
+const char HTTP_CUSTOM_SCRIPT[] PROGMEM = "<scirpt>function openPage(e){let a=e.parentNode,r=a.querySelector(\"[tab-name='\"+e.value+\"']\"),l=a.querySelectorAll(\":scope>.tabcontent\");for(vars=0;s<l.length;s++)l[s].classList.add(\"d-none\");null!==r&&r.classList.remove(\"d-none\")}functionnoDupeValues(e){for(vara=document.querySelectorAll(\"input[type=number]\"),r={},l=0,s=a.length;l<s;++l){varn=a[l].value.trim();if(n&&\"-1\"!=n){if(a[l].className=a[l].className.replace(\"error\",\"\"),r[n]){a[l].className+=\"error\",r[n].className+=\" error\",event.preventDefault();let t=document.querySelector(\"#message\");t.innerHTML=\"Some pins are usedmultiple times please checkvalues\",t.className=t.className.replace(\"d-none\",\"\")}r[n]=a[l]}}return!0}</scirpt>";
 const char HTTP_FORM_CUSTOM_PARAM[] PROGMEM = "<br/><input type='{t}' id='{i}' name='{n}' min='{e}' max='{h}' value='{v}' size='{l}'>\n"; // do not remove newline!
 const char HTTP_FORM_SELECT_START[] PROGMEM = "<select onchange='{v}' name='{n}'>";
 const char HTTP_FORM_SELECT_OPTION[] PROGMEM = "<option value='{v}' {c}>'{t}'</option>";
@@ -30,6 +32,9 @@ std::string inputSelect(std::string name, std::string *strings, int stringArrayS
     // Serial.println(returnStr.c_str());
     return returnStr;
 }
+class CustomWiFiManagerParameter : WiFiManagerParameter{
+
+};
 
 struct SelectParameter
 {
